@@ -1,0 +1,37 @@
+{
+  "name": "mycelial-realms",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Browser-based identification trainer for wild fungi. Teaches the process of identification, not answers.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "validate": "tsx scripts/validate-species.ts",
+    "validate:strict": "tsx scripts/validate-species.ts --strict",
+    "test": "npm run validate && vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.7.0",
+    "idb": "^8.0.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "three": "^0.185.1",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@types/three": "^0.185.3",
+    "@vitejs/plugin-react": "^6.0.5",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  }
+}

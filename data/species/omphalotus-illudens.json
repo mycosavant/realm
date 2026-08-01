@@ -1,0 +1,27 @@
+{
+  "id": "omphalotus-illudens",
+  "scientificName": "Omphalotus illudens",
+  "commonNames": ["eastern jack-o'-lantern", "jack-o'-lantern"],
+  "features": {
+    "hymenium.type": ["gills"],
+    "gills.attachment": ["decurrent"],
+    "gills.edge": ["sharp"],
+    "spore.print": ["white"],
+    "stem.base": ["equal"],
+    "stem.ring": ["absent"],
+    "flesh.section": ["solid"],
+    "bruising": ["brown"],
+    "odor": ["none"],
+    "substrate": ["hardwood-dead", "hardwood-living"],
+    "growth.habit": ["clustered-fused"]
+  },
+  "foragingStatus": "toxic",
+  "toxinNotes": "Illudin S. Onset is fast — typically 30 minutes to 2 hours — with severe vomiting, cramping and diarrhea. Rarely fatal in healthy adults, but dehydration is serious and hospitalization is common. There is no antidote; treatment is supportive. The gills are genuinely bioluminescent, but the glow is faint, needs a fully dark-adapted eye and fresh material, and is not a field test.",
+  "ecologyNotes": "Saprotrophic and weakly parasitic on hardwood, overwhelmingly oak in Kentucky. Fruits in dense clusters with the stem bases fused into a common mass, on stumps, root flares and buried roots. The buried-root habit is the trap: a cluster arising from a root ten centimetres down looks like it is growing out of bare soil, so 'growing from the ground' is not the same evidence as 'mycorrhizal with soil'. True gills — thin, sharp-edged, knife-like, separable from the cap flesh. Cap and flesh orange throughout.\n\nOPEN QUESTION FOR REVIEW: spore print recorded as 'white'; it is usually described as cream to very pale yellow. It is deliberately listed as a red herring in this confusion set because at field resolution it does not separate Omphalotus from Cantharellus — confirm that is right, because it is the pedagogical point of the set.",
+  "phenology": { "startMonth": 7, "endMonth": 11 },
+  "review": {
+    "reviewedBy": null,
+    "reviewedOn": null,
+    "sources": []
+  }
+}
