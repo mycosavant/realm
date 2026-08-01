@@ -53,6 +53,20 @@ describe('shipped content', () => {
     expect(JACK_O_LANTERN.toxinNotes).toMatch(/illudin/i);
   });
 
+  it('leaves the dangerous pair unresolved by spore print', () => {
+    // The safety claim in the teaching note, pinned. The print isolates the
+    // smooth chanterelle from everything, and is silent on exactly the pairing
+    // a forager is most likely to be holding: dull orange chanterelle against
+    // jack-o'-lantern. If a data edit ever makes the print decisive there, the
+    // teaching note becomes a lie and this fails.
+    const print = (species: Species) => new Set(species.features['spore.print'] ?? []);
+    const overlaps = (a: Set<string>, b: Set<string>) => [...a].some((value) => b.has(value));
+
+    expect(overlaps(print(CHANTERELLE), print(JACK_O_LANTERN))).toBe(true);
+    expect(overlaps(print(SMOOTH_CHANTERELLE), print(CHANTERELLE))).toBe(false);
+    expect(overlaps(print(SMOOTH_CHANTERELLE), print(JACK_O_LANTERN))).toBe(false);
+  });
+
   it('has no edibility verdict anywhere in the data', () => {
     for (const entry of content.species) {
       expect(Object.keys(entry.data as object)).not.toContain('edible');

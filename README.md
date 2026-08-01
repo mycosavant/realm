@@ -27,6 +27,11 @@ npm run typecheck
 npm run dev           # placeholder shell — no game UI yet
 ```
 
+CI runs typecheck, `npm test` and the build on every push and pull request, and
+reports unreviewed taxa in the run summary without blocking. The blocking
+`validate:strict` gate runs on tags and releases only — see
+`.github/workflows/`.
+
 ## Repo layout
 
 ```
@@ -103,13 +108,13 @@ Ratifying a source is not review. `review.reviewedBy` stays null regardless.
 
 Each is written into the `ecologyNotes` of the file it affects:
 
-1. **Is a pale pinkish yellow spore print distinguishable from a white-to-creamy
-   one, on paper?** This is the load-bearing one. *C. lateritius* is recorded
-   `pale-yellow` and *C. appalachiensis* `white, cream`, which makes the spore
-   print the only character separating the two chanterelles. If the difference
-   is not readable in practice, widen *lateritius* and the print goes back to
-   being a red herring. Whether the vocabulary needs a `pinkish-yellow` value
-   is the same question.
+1. **Should the game model tool-conditional characters?** *Settled that the
+   character is real:* a pale pinkish yellow print is distinguishable from a
+   white-to-creamy one *on dark paper*, and indistinguishable on white. The
+   vocabulary now carries `pinkish-yellow` and the examination calls for both
+   papers. What is not modelled is the conditionality — `applyExamination`
+   returns the same value whichever paper you used. Making informativeness
+   depend on technique is a real mechanic and a real schema change.
 2. **Growth habit as a tendency.** The sources say chanterelles *rarely* grow in
    dense clusters and the jack-o'-lantern is *usually* clustered — and both
    chanterelles are recorded as forming small or loose clusters. The schema has

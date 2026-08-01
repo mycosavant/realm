@@ -1,0 +1,36 @@
+name: Release gate
+
+# No unreviewed taxon ships. This is the blocking half of the two-tier content
+# gate described in CLAUDE.md: `validate:strict` fails on any species file whose
+# review.reviewedBy is null, which is every file until a mycologist signs off.
+#
+# It deliberately does not run on ordinary pushes or pull requests — see
+# ci.yml for the advisory version that runs there.
+
+on:
+  push:
+    tags: ['v*']
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  no-unreviewed-content:
+    name: All content reviewed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Every species file must carry a reviewer
+        run: npm run validate:strict
+
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
