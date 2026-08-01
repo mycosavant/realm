@@ -88,7 +88,7 @@ describe('recordAttempt', () => {
     const entry = after.notebook[JACK_O_LANTERN.id];
     expect(entry.encounters).toBe(1);
     expect(entry.correctIds).toBe(0);
-    expect(entry.confirmedFeatures['growth.habit']).toEqual(['clustered-fused']);
+    expect(entry.confirmedFeatures['growth.habit']).toEqual(['clustered']);
     expect(after.hardStops).toBe(1);
     expect(after.xp).toBe(0);
   });

@@ -59,10 +59,10 @@ describe('candidateSpecies', () => {
   });
 
   it('cannot separate the two chanterelles when the underside is unreadable', () => {
-    // A chanterelle button, in situ. Habit, substrate and odor rule out the
-    // jack-o'-lantern outright, and then stop: the only character that
-    // separates the ridged chanterelle from the smooth one is the one an
-    // unopened button will not show.
+    // A chanterelle button, in situ. Substrate and odor rule out the
+    // jack-o'-lantern outright, and then stop: both characters that separate
+    // the ridged chanterelle from the smooth one — the hymenium and the spore
+    // print — are ones an unopened button will not give up.
     const button = generateSpecimen(CHANTERELLE, makeRng(18), {
       age: 'button',
       weathering: 0.2,
@@ -104,18 +104,14 @@ describe('grade — evidence earns the XP', () => {
   it('scales XP with evidence above the threshold', () => {
     const specimen = chanterelle();
     const result = grade(
-      attempt(
-        specimen.id,
-        ['hymenium.type', 'growth.habit', 'substrate'],
-        id(CHANTERELLE.id),
-      ),
+      attempt(specimen.id, ['hymenium.type', 'substrate', 'odor'], id(CHANTERELLE.id)),
       CHANTERELLE_SET,
       specimen,
       SPECIES_INDEX,
     );
-    expect(result.evidenceRatio).toBeCloseTo(0.6);
-    expect(result.xp).toBe(84);
-    expect(result.missedDiscriminators).toEqual(['gills.edge', 'odor']);
+    expect(result.evidenceRatio).toBeCloseTo(0.75);
+    expect(result.xp).toBe(90);
+    expect(result.missedDiscriminators).toEqual(['spore.print']);
   });
 
   it('pays a correct guess almost nothing and names what went unchecked', () => {
@@ -127,10 +123,10 @@ describe('grade — evidence earns the XP', () => {
       SPECIES_INDEX,
     );
     expect(result.correct).toBe(true);
-    expect(result.evidenceRatio).toBeCloseTo(0.2);
+    expect(result.evidenceRatio).toBeCloseTo(0.25);
     expect(result.xp).toBe(XP_LUCKY_GUESS);
     expect(result.feedback.join(' ')).toMatch(/you guessed it/i);
-    expect(result.feedback.join(' ')).toMatch(/gill edge/);
+    expect(result.feedback.join(' ')).toMatch(/spore print/);
   });
 
   it('counts an examination that came back empty as evidence gathered', () => {
@@ -218,7 +214,7 @@ describe('grade — being wrong', () => {
   it('stops the run when an edible call is made on a toxic specimen', () => {
     const specimen = jack();
     const result = grade(
-      attempt(specimen.id, ['spore.print', 'gills.attachment'], id(CHANTERELLE.id)),
+      attempt(specimen.id, ['gills.attachment', 'bruising'], id(CHANTERELLE.id)),
       CHANTERELLE_SET,
       specimen,
       SPECIES_INDEX,
@@ -245,7 +241,7 @@ describe('grade — being wrong', () => {
   it('names the red herrings the player leaned on', () => {
     const specimen = jack();
     const result = grade(
-      attempt(specimen.id, ['spore.print', 'gills.attachment'], id(CHANTERELLE.id)),
+      attempt(specimen.id, ['gills.attachment', 'bruising'], id(CHANTERELLE.id)),
       CHANTERELLE_SET,
       specimen,
       SPECIES_INDEX,

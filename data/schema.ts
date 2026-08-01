@@ -2,14 +2,14 @@ export type FeatureId =
   | 'hymenium.type'        // gills | false-ridges | pores | teeth | smooth | pits-ridges
   | 'gills.attachment'     // free | adnate | adnexed | decurrent
   | 'gills.edge'           // sharp | blunt-forking
-  | 'spore.print'          // white | pink | brown | rust | black | olive
+  | 'spore.print'          // white | cream | pale-yellow | pink | brown | rust | black | olive
   | 'stem.base'            // volva | bulbous | equal | absent | lateral
   | 'stem.ring'            // present | absent
   | 'flesh.section'        // hollow-single | chambered-cottony | solid | zoned
   | 'bruising'             // none | blue | red | brown | latex
   | 'odor'                 // none | apricot | farinaceous | phenolic | anise
   | 'substrate'            // soil-mycorrhizal | hardwood-dead | hardwood-living | conifer | dung
-  | 'growth.habit';        // solitary | scattered | clustered-fused | shelving
+  | 'growth.habit';        // solitary | scattered | clustered | clustered-fused | shelving
 
 /** How the player obtains a feature value. Cost creates the game's tension. */
 export interface Examination {
@@ -120,19 +120,31 @@ export const FEATURE_IDS = [
   'growth.habit',
 ] as const satisfies readonly FeatureId[];
 
-/** Controlled vocabulary. The validator rejects anything outside it. */
+/**
+ * Controlled vocabulary. The validator rejects anything outside it.
+ *
+ * The vocabulary exists to be extended. If a ratified source describes a
+ * character this list cannot express, add the value — do not round the source
+ * to the nearest thing already here. A coarsened value reads as a fact and is
+ * not one.
+ */
 export const FEATURE_VALUES: Record<FeatureId, readonly string[]> = {
   'hymenium.type': ['gills', 'false-ridges', 'pores', 'teeth', 'smooth', 'pits-ridges'],
   'gills.attachment': ['free', 'adnate', 'adnexed', 'decurrent'],
   'gills.edge': ['sharp', 'blunt-forking'],
-  'spore.print': ['white', 'pink', 'brown', 'rust', 'black', 'olive'],
+  // 'cream' and 'pale-yellow' are separate from 'white': three taxa in the
+  // first confusion set are described across exactly that range.
+  'spore.print': ['white', 'cream', 'pale-yellow', 'pink', 'brown', 'rust', 'black', 'olive'],
   'stem.base': ['volva', 'bulbous', 'equal', 'absent', 'lateral'],
   'stem.ring': ['present', 'absent'],
   'flesh.section': ['hollow-single', 'chambered-cottony', 'solid', 'zoned'],
   'bruising': ['none', 'blue', 'red', 'brown', 'latex'],
   'odor': ['none', 'apricot', 'farinaceous', 'phenolic', 'anise'],
   'substrate': ['soil-mycorrhizal', 'hardwood-dead', 'hardwood-living', 'conifer', 'dung'],
-  'growth.habit': ['solitary', 'scattered', 'clustered-fused', 'shelving'],
+  // 'clustered' is separate from 'clustered-fused': clustering on its own is
+  // suggestive, fused stem bases are a structural claim. Do not assert the
+  // second when a source only supports the first.
+  'growth.habit': ['solitary', 'scattered', 'clustered', 'clustered-fused', 'shelving'],
 };
 
 /** Human-readable names, used in scoring feedback and the notebook. */

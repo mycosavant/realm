@@ -5,22 +5,24 @@
   "features": {
     "hymenium.type": ["smooth"],
     "gills.attachment": ["decurrent"],
-    "gills.edge": ["blunt-forking"],
-    "spore.print": ["white"],
+    "spore.print": ["pale-yellow"],
     "stem.base": ["equal"],
     "stem.ring": ["absent"],
     "flesh.section": ["solid"],
-    "bruising": ["brown"],
+    "bruising": ["none"],
     "odor": ["apricot"],
     "substrate": ["soil-mycorrhizal"],
-    "growth.habit": ["solitary", "scattered"]
+    "growth.habit": ["solitary", "scattered", "clustered"]
   },
   "foragingStatus": "commonly-eaten-when-confirmed",
-  "ecologyNotes": "Mycorrhizal with oak, common in southeastern and Appalachian hardwoods. Cap orange-yellow to apricot, larger and brighter than C. appalachiensis. Fruits singly or scattered from soil, never fused on wood. Strong apricot odor. Flesh white throughout when cut.\n\nThe underside is the whole point of this entry: the hymenium is smooth to shallowly wrinkled rather than ridged, so the very character that separates a chanterelle from a jack-o'-lantern — false ridges versus true gills — presents differently here. A player who has learned 'ridges good, gills bad' meets a chanterelle with neither.\n\nOPEN QUESTION FOR REVIEW: gills.edge is recorded as 'blunt-forking'. On a genuinely smooth hymenium there is arguably no edge to read, and the honest encoding would be to omit the feature entirely — an examination would then return 'not-applicable', which is real evidence. That is blocked today because the validator requires every member of a confusion set to define every discriminator. If you decide a smooth hymenium has no readable edge, gills.edge has to come out of the discriminator list for this set, and the validator will hold you to it.\n\nOPEN QUESTION FOR REVIEW: this taxon is frequently treated as Craterellus lateritius, and the placement is not settled. Decide which name v1 ships under.\n\nOPEN QUESTION FOR REVIEW: phenology is set to June–October. Confirm the Kentucky window.\n\nOPEN QUESTION FOR REVIEW: spore print recorded as 'white'; it is white to pale yellow in the field. Same coarsening question as the other two members of this set.",
-  "phenology": { "startMonth": 6, "endMonth": 10 },
+  "ecologyNotes": "Mycorrhizal with oaks and sometimes hickories. Cap bright orange-yellow to egg-yolk yellow, larger and brighter than C. appalachiensis. Stem tapering toward the base, coloured like the cap or paler, with white basal mycelium. Flesh white, unchanging when sliced. Odor usually strong, fragrant and sweet, reminiscent of apricots. Grows alone, scattered, gregariously, densely gregariously, or in loose clusters. Summer and fall.\n\nThe undersurface is the whole point of this entry: smooth or with shallow wrinkles, occasionally with more developed wrinkles that approach creating a veined surface near the margin, and running down the stem. A player who has learned 'ridges good, gills bad' meets a chanterelle with neither.\n\nNOTE: gills.edge is deliberately absent. A smooth hymenium has no gill edge to read, so an examination returns 'not-applicable' — which is real evidence, and is why gills.edge is no longer a discriminator in this confusion set. This resolves an earlier open question rather than leaving it.\n\nOPEN QUESTION FOR REVIEW: spore print is recorded as 'pale-yellow' from the source's 'pale pinkish yellow'. The pinkish component is dropped because the vocabulary has no value for it, and that omission is load-bearing — it is the only character separating this species from C. appalachiensis, whose print is white to creamy. Two things to confirm: that a pale pinkish yellow print is genuinely distinguishable on paper from a white-to-creamy one, and whether the vocabulary needs a 'pinkish-yellow' value. If the answer to the first is no, this species' print should be widened to overlap and spore.print goes back to being a red herring.\n\nOPEN QUESTION FOR REVIEW: hymenium.type is recorded as 'smooth' alone, though the source allows wrinkles that 'approach creating a veined surface'. Adding 'false-ridges' as a second value would make this species inseparable from C. appalachiensis on that character. Confirm 'smooth' alone is right.\n\nOPEN QUESTION FOR REVIEW: phenology is encoded as June–November from 'Summer and fall'. Narrow it to the Kentucky window.",
+  "phenology": { "startMonth": 6, "endMonth": 11 },
   "review": {
     "reviewedBy": null,
     "reviewedOn": null,
-    "sources": []
+    "sources": [
+      "Kuo, M. Cantharellus lateritius. MushroomExpert.Com. https://www.mushroomexpert.com/cantharellus_lateritius.html",
+      "Mushroom Observer. https://mushroomobserver.org/"
+    ]
   }
 }
