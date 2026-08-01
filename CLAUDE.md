@@ -52,9 +52,14 @@ seasons, weather, mobile apps.
 
 A `ConfusionSet` is validated structurally, not just typed:
 
-- every member species must define every discriminator,
-- every discriminator must actually separate at least one pair of members,
-- every red herring must actually *fail* to separate at least one pair.
+- every member species must define every discriminator and every red herring,
+- every discriminator must separate at least one pair of members,
+- every red herring must separate *no* pair of members.
 
-If a red herring starts separating everything, it was a discriminator and the
-data is lying about the lesson. CI catches that.
+The two rules are deliberately asymmetric. Once a set has three or more
+members, a character can separate some pairs and not others — growth habit
+tells a jack-o'-lantern from either chanterelle while saying nothing about
+which chanterelle. That character carries real information and belongs in
+`discriminators`. If "separates at least one pair" were good enough for a red
+herring, the most important character in a set could sit in the wrong list and
+the teaching note would be lying. CI catches that.

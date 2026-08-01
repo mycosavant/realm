@@ -260,18 +260,25 @@ export function validateConfusionSet(
     }
   }
 
+  // A red herring must carry no separating information at all. "Separates some
+  // pairs but not others" is not a red herring — with three or more members it
+  // is how the single most important character in a set can hide in the wrong
+  // list. Growth habit tells a jack-o'-lantern from either chanterelle while
+  // saying nothing about which chanterelle; that is a discriminator.
   for (const feature of redHerrings) {
-    const defined = known.filter((species) => valuesOf(species, feature).size > 0);
-    if (defined.length < 2) {
-      error(`red herring "${feature}" is defined on fewer than two members — it cannot mislead anyone`);
+    const missing = known.filter((species) => valuesOf(species, feature).size === 0);
+    if (missing.length > 0) {
+      error(
+        `red herring "${feature}" is undefined on ${missing.map((s) => s.id).join(', ')} — a character some members lack is a character that separates them`,
+      );
       continue;
     }
-    const overlapsSomePair = defined.some((a, i) =>
-      defined.slice(i + 1).some((b) => !disjoint(valuesOf(a, feature), valuesOf(b, feature))),
-    );
-    if (!overlapsSomePair) {
+    const separatedPair = known
+      .flatMap((a, i) => known.slice(i + 1).map((b) => [a, b] as const))
+      .find(([a, b]) => disjoint(valuesOf(a, feature), valuesOf(b, feature)));
+    if (separatedPair) {
       error(
-        `red herring "${feature}" fully separates every member — it is a discriminator, and the teaching note is lying`,
+        `red herring "${feature}" separates ${separatedPair[0].id} from ${separatedPair[1].id} — it carries real information, so it is a discriminator and the teaching note is lying`,
       );
     }
   }

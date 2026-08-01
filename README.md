@@ -92,18 +92,27 @@ Per `CLAUDE.md` rule 4 that field is filled in by a human or not at all.
 
 ### Open questions for the mycologist
 
-Both are written into the `ecologyNotes` of the files they affect:
+Each is written into the `ecologyNotes` of the file it affects:
 
-1. **Which chanterelle.** The file ships as `Cantharellus cibarius sensu lato`.
-   *C. cibarius* proper is European; Kentucky material is likely *C. flavus* /
-   *C. tenuis* / *C. spectaculus*, and the smooth chanterelle *C. lateritius*
-   grows in the same woods with a near-smooth hymenium — which would change the
-   first discriminator in the set. Decide whether v1 ships one entry or splits
-   *C. lateritius* out.
-2. **Spore print colour resolution.** Both members are recorded as `white`; both
-   are really cream to pale yellow. That coarsening is what makes the spore
-   print a red herring in this set, and the red herring is the point — so it
-   needs confirming, not assuming.
+1. **Spore print colour resolution.** All three members are recorded as `white`;
+   all three are really white to pale yellow. That coarsening is what makes the
+   spore print a red herring in this set, and the red herring is the point — so
+   it needs confirming, not assuming. Adding a `cream` value to the vocabulary
+   is the alternative, and it would not change the lesson.
+2. **Odor of *C. appalachiensis*.** Recorded as `apricot`, which is the safe
+   direction rather than the certain one: descriptions run from fruity to not
+   distinctive, and recording `none` would stop odor separating it from
+   *Omphalotus*. Reasoning is in the file.
+3. **Gill edge on a smooth hymenium.** *C. lateritius* is recorded as
+   `blunt-forking`, but a genuinely smooth hymenium arguably has no edge to
+   read. Omitting the feature is the honest encoding — an examination would
+   return `not-applicable`, which is real evidence — but the validator requires
+   every member of a set to define every discriminator, so `gills.edge` would
+   have to leave the discriminator list.
+4. **Which name for the smooth chanterelle**, *Cantharellus* or *Craterellus*.
+5. **The large golden chanterelle** of the *C. cibarius* group has no entry. If
+   it fruits alongside these two, it needs one.
+6. **Phenology windows** for both chanterelles are approximate.
 
 `gbifTaxonKey` and `inatTaxonId` are deliberately absent. They deep-link a user
 outward to a real taxon page, and a wrong key sends them to the wrong mushroom.

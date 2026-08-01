@@ -1,0 +1,26 @@
+{
+  "id": "cantharellus-lateritius",
+  "scientificName": "Cantharellus lateritius",
+  "commonNames": ["smooth chanterelle"],
+  "features": {
+    "hymenium.type": ["smooth"],
+    "gills.attachment": ["decurrent"],
+    "gills.edge": ["blunt-forking"],
+    "spore.print": ["white"],
+    "stem.base": ["equal"],
+    "stem.ring": ["absent"],
+    "flesh.section": ["solid"],
+    "bruising": ["brown"],
+    "odor": ["apricot"],
+    "substrate": ["soil-mycorrhizal"],
+    "growth.habit": ["solitary", "scattered"]
+  },
+  "foragingStatus": "commonly-eaten-when-confirmed",
+  "ecologyNotes": "Mycorrhizal with oak, common in southeastern and Appalachian hardwoods. Cap orange-yellow to apricot, larger and brighter than C. appalachiensis. Fruits singly or scattered from soil, never fused on wood. Strong apricot odor. Flesh white throughout when cut.\n\nThe underside is the whole point of this entry: the hymenium is smooth to shallowly wrinkled rather than ridged, so the very character that separates a chanterelle from a jack-o'-lantern — false ridges versus true gills — presents differently here. A player who has learned 'ridges good, gills bad' meets a chanterelle with neither.\n\nOPEN QUESTION FOR REVIEW: gills.edge is recorded as 'blunt-forking'. On a genuinely smooth hymenium there is arguably no edge to read, and the honest encoding would be to omit the feature entirely — an examination would then return 'not-applicable', which is real evidence. That is blocked today because the validator requires every member of a confusion set to define every discriminator. If you decide a smooth hymenium has no readable edge, gills.edge has to come out of the discriminator list for this set, and the validator will hold you to it.\n\nOPEN QUESTION FOR REVIEW: this taxon is frequently treated as Craterellus lateritius, and the placement is not settled. Decide which name v1 ships under.\n\nOPEN QUESTION FOR REVIEW: phenology is set to June–October. Confirm the Kentucky window.\n\nOPEN QUESTION FOR REVIEW: spore print recorded as 'white'; it is white to pale yellow in the field. Same coarsening question as the other two members of this set.",
+  "phenology": { "startMonth": 6, "endMonth": 10 },
+  "review": {
+    "reviewedBy": null,
+    "reviewedOn": null,
+    "sources": []
+  }
+}

@@ -11,7 +11,8 @@ function readJson<T>(relativePath: string): T {
 }
 
 /** Real, shipped content — the same files the validator gates. */
-export const CHANTERELLE = readJson<Species>('species/cantharellus-cibarius-sl.json');
+export const CHANTERELLE = readJson<Species>('species/cantharellus-appalachiensis.json');
+export const SMOOTH_CHANTERELLE = readJson<Species>('species/cantharellus-lateritius.json');
 export const JACK_O_LANTERN = readJson<Species>('species/omphalotus-illudens.json');
 export const CHANTERELLE_SET = readJson<ConfusionSet>(
   'confusion-sets/chanterelle-vs-jack-o-lantern.json',
@@ -19,6 +20,7 @@ export const CHANTERELLE_SET = readJson<ConfusionSet>(
 
 export const SPECIES_INDEX: Record<string, Species> = {
   [CHANTERELLE.id]: CHANTERELLE,
+  [SMOOTH_CHANTERELLE.id]: SMOOTH_CHANTERELLE,
   [JACK_O_LANTERN.id]: JACK_O_LANTERN,
 };
 

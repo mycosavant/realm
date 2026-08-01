@@ -18,6 +18,7 @@ import {
   FIXTURE_DESTROYING_ANGEL,
   FIXTURE_INDEX,
   JACK_O_LANTERN,
+  SMOOTH_CHANTERELLE,
   SPECIES_INDEX,
 } from './fixtures';
 
@@ -55,6 +56,22 @@ describe('candidateSpecies', () => {
     expect(candidateSpecies(uselessButton(), CHANTERELLE_SET, SPECIES_INDEX)).toEqual(
       CHANTERELLE_SET.memberSpeciesIds,
     );
+  });
+
+  it('cannot separate the two chanterelles when the underside is unreadable', () => {
+    // A chanterelle button, in situ. Habit, substrate and odor rule out the
+    // jack-o'-lantern outright, and then stop: the only character that
+    // separates the ridged chanterelle from the smooth one is the one an
+    // unopened button will not show.
+    const button = generateSpecimen(CHANTERELLE, makeRng(18), {
+      age: 'button',
+      weathering: 0.2,
+      snapChance: 0,
+      detachedChance: 0,
+    });
+    const candidates = candidateSpecies(button, CHANTERELLE_SET, SPECIES_INDEX);
+    expect(candidates).toEqual([CHANTERELLE.id, SMOOTH_CHANTERELLE.id]);
+    expect(candidates).not.toContain(JACK_O_LANTERN.id);
   });
 
   it('still resolves a jack-o-lantern that appears to grow from soil', () => {
@@ -162,6 +179,25 @@ describe('grade — declining', () => {
     expect(result.xp).toBe(XP_UNNECESSARY_DECLINE);
     expect(result.feedback.join(' ')).toMatch(/resolvable/i);
     expect(result.feedback.join(' ')).toMatch(/false-ridges/);
+  });
+
+  it('pays full marks for declining between the two chanterelles', () => {
+    const button = generateSpecimen(CHANTERELLE, makeRng(19), {
+      age: 'button',
+      weathering: 0.2,
+      snapChance: 0,
+      detachedChance: 0,
+    });
+    const result = grade(
+      attempt(button.id, [...CHANTERELLE_SET.discriminators], declined),
+      CHANTERELLE_SET,
+      button,
+      SPECIES_INDEX,
+    );
+    expect(result.correctlyDeclined).toBe(true);
+    expect(result.xp).toBe(XP_FULL);
+    expect(result.feedback.join(' ')).toMatch(/Appalachian chanterelle and smooth chanterelle/);
+    expect(result.feedback.join(' ')).toMatch(/spore-bearing surface/);
   });
 
   it('treats a right answer on an unresolvable individual as unearned', () => {

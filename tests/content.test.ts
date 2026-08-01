@@ -11,17 +11,20 @@ import {
   validateSpecies,
   type Issue,
 } from '../scripts/validate-species';
-import { CHANTERELLE, CHANTERELLE_SET, JACK_O_LANTERN } from './fixtures';
+import { CHANTERELLE, CHANTERELLE_SET, JACK_O_LANTERN, SMOOTH_CHANTERELLE } from './fixtures';
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'data');
 const content = loadContent(dataDir);
 const issues = validateAll(content);
+
+const SPECIES_FILE = `species/${CHANTERELLE.id}.json`;
 
 const errors = (found: Issue[]) => found.filter((issue) => issue.level === 'error');
 const messages = (found: Issue[]) => found.map((issue) => issue.message).join('\n');
 
 const speciesIndex = new Map<string, Species>([
   [CHANTERELLE.id, CHANTERELLE],
+  [SMOOTH_CHANTERELLE.id, SMOOTH_CHANTERELLE],
   [JACK_O_LANTERN.id, JACK_O_LANTERN],
 ]);
 
@@ -33,7 +36,8 @@ describe('shipped content', () => {
   it('is entirely unreviewed — Claude never signs off on content', () => {
     const unreviewed = issues.filter((issue) => issue.level === 'unreviewed');
     expect(unreviewed.map((issue) => issue.file).sort()).toEqual([
-      'species/cantharellus-cibarius-sl.json',
+      'species/cantharellus-appalachiensis.json',
+      'species/cantharellus-lateritius.json',
       'species/omphalotus-illudens.json',
     ]);
   });
@@ -60,13 +64,13 @@ describe('validateSpecies', () => {
   const valid = () => structuredClone(CHANTERELLE) as unknown as Record<string, unknown>;
 
   it('accepts the shipped chanterelle', () => {
-    expect(errors(validateSpecies(valid(), 'species/cantharellus-cibarius-sl.json'))).toEqual([]);
+    expect(errors(validateSpecies(valid(), SPECIES_FILE))).toEqual([]);
   });
 
   it('rejects a feature value outside the vocabulary', () => {
     const broken = valid();
     (broken.features as Record<string, string[]>)['spore.print'] = ['chartreuse'];
-    expect(messages(errors(validateSpecies(broken, 'species/cantharellus-cibarius-sl.json')))).toMatch(
+    expect(messages(errors(validateSpecies(broken, SPECIES_FILE)))).toMatch(
       /outside the vocabulary/,
     );
   });
@@ -74,7 +78,7 @@ describe('validateSpecies', () => {
   it('rejects an unknown feature id', () => {
     const broken = valid();
     (broken.features as Record<string, string[]>)['cap.colour'] = ['orange'];
-    expect(messages(errors(validateSpecies(broken, 'species/cantharellus-cibarius-sl.json')))).toMatch(
+    expect(messages(errors(validateSpecies(broken, SPECIES_FILE)))).toMatch(
       /unknown feature/,
     );
   });
@@ -82,7 +86,7 @@ describe('validateSpecies', () => {
   it('rejects an `edible` field outright', () => {
     const broken = valid();
     broken.edible = true;
-    expect(messages(errors(validateSpecies(broken, 'species/cantharellus-cibarius-sl.json')))).toMatch(
+    expect(messages(errors(validateSpecies(broken, SPECIES_FILE)))).toMatch(
       /forbidden/,
     );
   });
@@ -90,7 +94,7 @@ describe('validateSpecies', () => {
   it('requires toxin notes on anything toxic or deadly', () => {
     const broken = valid();
     broken.foragingStatus = 'deadly';
-    expect(messages(errors(validateSpecies(broken, 'species/cantharellus-cibarius-sl.json')))).toMatch(
+    expect(messages(errors(validateSpecies(broken, SPECIES_FILE)))).toMatch(
       /requires toxinNotes/,
     );
   });
@@ -104,7 +108,7 @@ describe('validateSpecies', () => {
   it('requires sources and a date once a reviewer signs off', () => {
     const signed = valid();
     signed.review = { reviewedBy: 'A. Mycologist', reviewedOn: 'last tuesday', sources: [] };
-    const found = messages(errors(validateSpecies(signed, 'species/cantharellus-cibarius-sl.json')));
+    const found = messages(errors(validateSpecies(signed, SPECIES_FILE)));
     expect(found).toMatch(/YYYY-MM-DD/);
     expect(found).toMatch(/at least one source/);
   });
@@ -116,14 +120,14 @@ describe('validateSpecies', () => {
       reviewedOn: '2026-08-01',
       sources: ['Kuo, M. (2015). MushroomExpert.Com'],
     };
-    const found = validateSpecies(signed, 'species/cantharellus-cibarius-sl.json');
+    const found = validateSpecies(signed, SPECIES_FILE);
     expect(found).toEqual([]);
   });
 
   it('rejects a phenology outside the calendar', () => {
     const broken = valid();
     broken.phenology = { startMonth: 0, endMonth: 13 };
-    const found = messages(errors(validateSpecies(broken, 'species/cantharellus-cibarius-sl.json')));
+    const found = messages(errors(validateSpecies(broken, SPECIES_FILE)));
     expect(found).toMatch(/phenology.startMonth/);
     expect(found).toMatch(/phenology.endMonth/);
   });
@@ -139,7 +143,7 @@ describe('validateConfusionSet', () => {
 
   it('rejects a discriminator that discriminates nothing', () => {
     const broken = valid();
-    // Both species have decurrent hymenia — that is the whole lesson.
+    // All three species have decurrent hymenia — that is the whole lesson.
     (broken.discriminators as string[]).push('gills.attachment');
     (broken.redHerrings as string[]) = (broken.redHerrings as string[]).filter(
       (feature) => feature !== 'gills.attachment',
@@ -149,14 +153,27 @@ describe('validateConfusionSet', () => {
     );
   });
 
-  it('rejects a red herring that actually separates the members', () => {
+  it('rejects a red herring that separates only some pairs', () => {
     const broken = valid();
+    // Growth habit tells a jack-o'-lantern from either chanterelle while saying
+    // nothing about which chanterelle. Separating *some* pairs is still real
+    // information — it is a discriminator, and the weaker "overlaps at least
+    // one pair" rule let it hide here once the set grew past two members.
     (broken.redHerrings as string[]).push('growth.habit');
     (broken.discriminators as string[]) = (broken.discriminators as string[]).filter(
       (feature) => feature !== 'growth.habit',
     );
     expect(messages(errors(validateConfusionSet(broken, speciesIndex, file)))).toMatch(
       /it is a discriminator/,
+    );
+  });
+
+  it('rejects a red herring that some members do not define', () => {
+    const thin = structuredClone(SMOOTH_CHANTERELLE);
+    delete thin.features.bruising;
+    const index = new Map(speciesIndex).set(thin.id, thin);
+    expect(messages(errors(validateConfusionSet(valid(), index, file)))).toMatch(
+      /a character some members lack is a character that separates them/,
     );
   });
 

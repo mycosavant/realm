@@ -1,0 +1,26 @@
+{
+  "id": "cantharellus-appalachiensis",
+  "scientificName": "Cantharellus appalachiensis",
+  "commonNames": ["Appalachian chanterelle"],
+  "features": {
+    "hymenium.type": ["false-ridges"],
+    "gills.attachment": ["decurrent"],
+    "gills.edge": ["blunt-forking"],
+    "spore.print": ["white"],
+    "stem.base": ["equal"],
+    "stem.ring": ["absent"],
+    "flesh.section": ["solid"],
+    "bruising": ["brown"],
+    "odor": ["apricot"],
+    "substrate": ["soil-mycorrhizal"],
+    "growth.habit": ["solitary", "scattered"]
+  },
+  "foragingStatus": "commonly-eaten-when-confirmed",
+  "ecologyNotes": "Small chanterelle of Appalachian and southeastern oak woods, mycorrhizal, in Kentucky mostly with oak and beech on shaded slopes. Cap is brownish to olive-brown or yellow-brown, often darker at the centre, and considerably duller than the large golden chanterelles people expect — a beginner talked out of it by colour alone is looking at the wrong character. Fruits singly or scattered from soil and leaf litter, never in fused clusters and never from wood.\n\nThe hymenium is not gills: blunt, forking, cross-veined false ridges, continuous with the cap flesh and running down the stem. Flesh white throughout when cut.\n\nOPEN QUESTION FOR REVIEW: odor is recorded as 'apricot'. The apricot smell is well established for the larger golden chanterelles and for C. lateritius, but descriptions of C. appalachiensis run from fruity to not distinctive. It is coarsened to 'apricot' deliberately, because that is the safe direction — a player taught to expect apricot hesitates over a real chanterelle, whereas recording 'none' would make odor stop separating this species from Omphalotus and weaken the confusion set. Confirm from your own collections.\n\nOPEN QUESTION FOR REVIEW: phenology is set to June–September. Confirm the Kentucky window.\n\nOPEN QUESTION FOR REVIEW: spore print is recorded as 'white'. In the field it is white to pale yellow. The controlled vocabulary has no 'cream'; either confirm 'white' is the right coarsening or decide to add a value to the vocabulary. Adding one would not change the lesson — the print still fails to separate this species from Omphalotus — but it would make the data honest.\n\nNOTE: the large golden chanterelle of the C. cibarius group (C. flavus / C. tenuis / C. spectaculus in current eastern treatments) has no entry yet. If it fruits in your woods alongside these two, it needs one.",
+  "phenology": { "startMonth": 6, "endMonth": 9 },
+  "review": {
+    "reviewedBy": null,
+    "reviewedOn": null,
+    "sources": []
+  }
+}
