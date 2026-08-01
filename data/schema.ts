@@ -2,7 +2,7 @@ export type FeatureId =
   | 'hymenium.type'        // gills | false-ridges | pores | teeth | smooth | pits-ridges
   | 'gills.attachment'     // free | adnate | adnexed | decurrent
   | 'gills.edge'           // sharp | blunt-forking
-  | 'spore.print'          // white | cream | pale-yellow | pink | brown | rust | black | olive
+  | 'spore.print'          // white | cream | pale-yellow | pinkish-yellow | pink | brown | rust | black | olive
   | 'stem.base'            // volva | bulbous | equal | absent | lateral
   | 'stem.ring'            // present | absent
   | 'flesh.section'        // hollow-single | chambered-cottony | solid | zoned
@@ -132,9 +132,22 @@ export const FEATURE_VALUES: Record<FeatureId, readonly string[]> = {
   'hymenium.type': ['gills', 'false-ridges', 'pores', 'teeth', 'smooth', 'pits-ridges'],
   'gills.attachment': ['free', 'adnate', 'adnexed', 'decurrent'],
   'gills.edge': ['sharp', 'blunt-forking'],
-  // 'cream' and 'pale-yellow' are separate from 'white': three taxa in the
-  // first confusion set are described across exactly that range.
-  'spore.print': ['white', 'cream', 'pale-yellow', 'pink', 'brown', 'rust', 'black', 'olive'],
+  // The pale end of this list is deliberately fine-grained. Three taxa in the
+  // first confusion set are described across exactly that range, and the
+  // difference between 'pinkish-yellow' and 'white'/'cream' is readable in the
+  // field — on dark paper, which is why the spore print examination calls for
+  // it. Coarsening any of these to 'white' would erase a real character.
+  'spore.print': [
+    'white',
+    'cream',
+    'pale-yellow',
+    'pinkish-yellow',
+    'pink',
+    'brown',
+    'rust',
+    'black',
+    'olive',
+  ],
   'stem.base': ['volva', 'bulbous', 'equal', 'absent', 'lateral'],
   'stem.ring': ['present', 'absent'],
   'flesh.section': ['hollow-single', 'chambered-cottony', 'solid', 'zoned'],

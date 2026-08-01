@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Typecheck, validate, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      # `npm test` runs scripts/validate-species.ts first: structural errors in
+      # data/ fail here, in any mode. Unreviewed content does not — see below.
+      - run: npm test
+
+      - run: npm run build
+
+  content-review-status:
+    name: Content review status
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Advisory, not blocking. Unreviewed taxa are expected during development
+      # (CLAUDE.md rule 4: Claude never fills in review.reviewedBy), so this
+      # surfaces them in the run summary instead of failing the build. The
+      # blocking version is release-gate.yml.
+      - name: Report unreviewed taxa
+        run: |
+          {
+            echo '## Content review status'
+            echo
+            echo 'Advisory. `npm run validate:strict` is the release gate and blocks in'
+            echo '`release-gate.yml`; unreviewed content is expected during development.'
+            echo
+            echo '```'
+            npm run --silent validate:strict || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

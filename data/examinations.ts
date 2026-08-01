@@ -71,7 +71,10 @@ export const EXAMINATIONS: Record<FeatureId, Examination> = {
   },
   'spore.print': {
     feature: 'spore.print',
-    label: 'Take a spore print',
+    // Half on white, half on dark. Pale prints — cream, pale yellow, pinkish
+    // yellow — are indistinguishable from each other on white paper alone, and
+    // in the first confusion set that difference is the whole character.
+    label: 'Take a spore print, on white and dark paper',
     actionCost: 3,
     requiresTool: 'paper',
     destructive: true,
