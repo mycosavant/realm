@@ -6,21 +6,24 @@
     "hymenium.type": ["false-ridges"],
     "gills.attachment": ["decurrent"],
     "gills.edge": ["blunt-forking"],
-    "spore.print": ["white"],
+    "spore.print": ["white", "cream"],
     "stem.base": ["equal"],
     "stem.ring": ["absent"],
     "flesh.section": ["solid"],
-    "bruising": ["brown"],
+    "bruising": ["none"],
     "odor": ["apricot"],
     "substrate": ["soil-mycorrhizal"],
-    "growth.habit": ["solitary", "scattered"]
+    "growth.habit": ["solitary", "scattered", "clustered"]
   },
   "foragingStatus": "commonly-eaten-when-confirmed",
-  "ecologyNotes": "Small chanterelle of Appalachian and southeastern oak woods, mycorrhizal, in Kentucky mostly with oak and beech on shaded slopes. Cap is brownish to olive-brown or yellow-brown, often darker at the centre, and considerably duller than the large golden chanterelles people expect — a beginner talked out of it by colour alone is looking at the wrong character. Fruits singly or scattered from soil and leaf litter, never in fused clusters and never from wood.\n\nThe hymenium is not gills: blunt, forking, cross-veined false ridges, continuous with the cap flesh and running down the stem. Flesh white throughout when cut.\n\nOPEN QUESTION FOR REVIEW: odor is recorded as 'apricot'. The apricot smell is well established for the larger golden chanterelles and for C. lateritius, but descriptions of C. appalachiensis run from fruity to not distinctive. It is coarsened to 'apricot' deliberately, because that is the safe direction — a player taught to expect apricot hesitates over a real chanterelle, whereas recording 'none' would make odor stop separating this species from Omphalotus and weaken the confusion set. Confirm from your own collections.\n\nOPEN QUESTION FOR REVIEW: phenology is set to June–September. Confirm the Kentucky window.\n\nOPEN QUESTION FOR REVIEW: spore print is recorded as 'white'. In the field it is white to pale yellow. The controlled vocabulary has no 'cream'; either confirm 'white' is the right coarsening or decide to add a value to the vocabulary. Adding one would not change the lesson — the print still fails to separate this species from Omphalotus — but it would make the data honest.\n\nNOTE: the large golden chanterelle of the C. cibarius group (C. flavus / C. tenuis / C. spectaculus in current eastern treatments) has no entry yet. If it fruits in your woods alongside these two, it needs one.",
-  "phenology": { "startMonth": 6, "endMonth": 9 },
+  "ecologyNotes": "Mycorrhizal with oaks and other hardwoods. Cap 1.5–6 cm, brown overall at first, developing yellow undertones and becoming yellowish brown to yellowish with a brown spot over the disc — considerably duller than the large golden chanterelles a beginner expects, so anyone using colour as the primary character is using the wrong one. Undersurface has well-developed, closely spaced false gills running down the stem, yellow throughout development, often developing cross-veins with maturity. Stem fairly slender, equal or tapering downward. Flesh whitish to yellowish, unchanging when sliced. Odor fragrant, reminiscent of apricots. Grows alone, gregariously, or in small clusters. Summer.\n\nOPEN QUESTION FOR REVIEW: gills.edge is recorded as 'blunt-forking'. MushroomExpert describes well-developed false gills with cross-veins but does not use the word 'blunt'; the value rests on general chanterelle morphology rather than on a quoted source. Confirm or replace.\n\nOPEN QUESTION FOR REVIEW: the stem is described as 'fleshy but becoming partially hollow at the core', which flesh.section cannot express — it records the cut section as 'solid'. That is right for the cap flesh and incomplete for the stem. Say whether the feature should distinguish the two.\n\nOPEN QUESTION FOR REVIEW: phenology is encoded as June–August from the source's bare 'Summer'. Narrow it to the Kentucky window from your own records.",
+  "phenology": { "startMonth": 6, "endMonth": 8 },
   "review": {
     "reviewedBy": null,
     "reviewedOn": null,
-    "sources": []
+    "sources": [
+      "Kuo, M. Cantharellus appalachiensis. MushroomExpert.Com. https://www.mushroomexpert.com/cantharellus_appalachiensis.html",
+      "Mushroom Observer. https://mushroomobserver.org/"
+    ]
   }
 }

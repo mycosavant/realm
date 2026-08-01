@@ -155,13 +155,13 @@ describe('validateConfusionSet', () => {
 
   it('rejects a red herring that separates only some pairs', () => {
     const broken = valid();
-    // Growth habit tells a jack-o'-lantern from either chanterelle while saying
-    // nothing about which chanterelle. Separating *some* pairs is still real
+    // Odor tells a jack-o'-lantern from either chanterelle while saying nothing
+    // about which chanterelle. Separating *some* pairs is still real
     // information — it is a discriminator, and the weaker "overlaps at least
     // one pair" rule let it hide here once the set grew past two members.
-    (broken.redHerrings as string[]).push('growth.habit');
+    (broken.redHerrings as string[]).push('odor');
     (broken.discriminators as string[]) = (broken.discriminators as string[]).filter(
-      (feature) => feature !== 'growth.habit',
+      (feature) => feature !== 'odor',
     );
     expect(messages(errors(validateConfusionSet(broken, speciesIndex, file)))).toMatch(
       /it is a discriminator/,

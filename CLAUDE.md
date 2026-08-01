@@ -37,6 +37,30 @@ seasons, weather, mobile apps.
 
 ## Working notes
 
+### Ratified sources
+
+Ground truth for taxonomic descriptions, standing approval:
+
+- **MushroomExpert.com** (Michael Kuo)
+- **MushroomObserver.org**
+
+Cite the specific page in `review.sources`. Two rules follow from ratifying
+them:
+
+1. **Do not coarsen a source to fit the vocabulary.** If a source describes a
+   character `FEATURE_VALUES` cannot express, add the value. Rounding "pale
+   pinkish yellow" to "white" puts a false statement in a file that reads as
+   ground truth.
+2. **Do not assert what they do not say.** Where a character is standard
+   knowledge but unstated on the page, record it and flag it in
+   `ecologyNotes` — do not present it as sourced.
+
+MushroomExpert carries no edibility or toxicity information by policy, so
+`toxinNotes` always needs its own citation.
+
+Ratifying a source is not review. `review.reviewedBy` stays null regardless —
+rule 4 is unchanged.
+
 ### Content review gate
 
 `npm test` runs `scripts/validate-species.ts` before vitest. It has two tiers:

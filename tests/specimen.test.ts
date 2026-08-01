@@ -117,8 +117,12 @@ describe('generateSpecimen', () => {
     });
     expect(specimen.observedFeatures.substrate).toBe('soil-mycorrhizal');
     expect(specimen.substrateOverride).toBe('soil-mycorrhizal');
-    // Habit still tells the truth: fused clusters mean wood.
-    expect(specimen.observedFeatures['growth.habit']).toBe('clustered-fused');
+    // Growth habit does NOT rescue you here. Both chanterelles cluster too, so
+    // a clustered specimen apparently rising from soil is consistent with all
+    // three. The underside and the smell are what settle it.
+    expect(specimen.observedFeatures['growth.habit']).toBe('clustered');
+    expect(specimen.observedFeatures['hymenium.type']).toBe('gills');
+    expect(specimen.observedFeatures.odor).toBe('none');
   });
 
   it('clamps weathering into 0..1', () => {

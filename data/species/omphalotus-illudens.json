@@ -6,22 +6,26 @@
     "hymenium.type": ["gills"],
     "gills.attachment": ["decurrent"],
     "gills.edge": ["sharp"],
-    "spore.print": ["white"],
+    "spore.print": ["white", "cream", "pale-yellow"],
     "stem.base": ["equal"],
     "stem.ring": ["absent"],
     "flesh.section": ["solid"],
-    "bruising": ["brown"],
+    "bruising": ["none"],
     "odor": ["none"],
     "substrate": ["hardwood-dead", "hardwood-living"],
-    "growth.habit": ["clustered-fused"]
+    "growth.habit": ["clustered"]
   },
   "foragingStatus": "toxic",
-  "toxinNotes": "Illudin S. Onset is fast — typically 30 minutes to 2 hours — with severe vomiting, cramping and diarrhea. Rarely fatal in healthy adults, but dehydration is serious and hospitalization is common. There is no antidote; treatment is supportive. The gills are genuinely bioluminescent, but the glow is faint, needs a fully dark-adapted eye and fresh material, and is not a field test.",
-  "ecologyNotes": "Saprotrophic and weakly parasitic on hardwood, overwhelmingly oak in Kentucky. Fruits in dense clusters with the stem bases fused into a common mass, on stumps, root flares and buried roots. The buried-root habit is the trap: a cluster arising from a root ten centimetres down looks like it is growing out of bare soil, so 'growing from the ground' is not the same evidence as 'mycorrhizal with soil'. True gills — thin, sharp-edged, knife-like, separable from the cap flesh. Cap and flesh orange throughout.\n\nOPEN QUESTION FOR REVIEW: spore print recorded as 'white'; it is usually described as cream to very pale yellow. It is deliberately listed as a red herring in this confusion set because at field resolution it does not separate Omphalotus from Cantharellus — confirm that is right, because it is the pedagogical point of the set.",
-  "phenology": { "startMonth": 7, "endMonth": 11 },
+  "toxinNotes": "Illudin S, a sesquiterpene. Onset is fast — roughly 30 minutes to 3 hours — with violent vomiting, severe abdominal cramping and diarrhea, often with weakness and sweating. Rarely fatal in healthy adults and usually resolving in 24 to 48 hours, but dehydration is serious and hospitalization for rehydration is common. There is no antidote; treatment is supportive.",
+  "ecologyNotes": "Saprobic, growing in large clusters on the stumps or buried roots of hardwoods, especially oaks. Late summer and fall. Cap bright orange to pumpkin orange. Gills are true gills — running down the stem, close or crowded, bright orange to pale orange, with frequent short-gills. Stem 3–13 cm, tapering to the base, solid, pale orange to orange. Flesh pale orange, unchanging when sliced. Odor not distinctive. Gills luminescent when fresh, but the glow is faint, needs a dark-adapted eye and fresh material, and is not a field test.\n\nThe buried-root habit is the trap this confusion set is built around: a cluster arising from a root ten centimetres down looks like it is growing out of bare soil, so 'growing from the ground' is not the same evidence as 'mycorrhizal with soil'.\n\nNOTE ON GROWTH HABIT: recorded as 'clustered', not 'clustered-fused'. MushroomExpert describes large or dense clusters and says only that 'Chanterelles rarely grow in dense clusters... the Jack O'Lantern is usually clustered'. That is a tendency, not a categorical split, and the schema has no way to say 'usually'. Fused stem bases are widely reported for this genus elsewhere but are not stated by the ratified sources, so they are not asserted here. The consequence is deliberate and checked by CI: growth habit is a red herring in this set, not a discriminator.\n\nOPEN QUESTION FOR REVIEW: gills.edge is recorded as 'sharp'. The source describes close or crowded true gills but does not describe edge morphology; the value rests on general agaric morphology. Confirm or replace.\n\nOPEN QUESTION FOR REVIEW: toxinNotes is NOT covered by the ratified description sources — MushroomExpert carries no edibility or toxicity information by policy. It is sourced separately, and it is the one piece of text in this file where being wrong has a body count. Please read it specifically.",
+  "phenology": { "startMonth": 8, "endMonth": 11 },
   "review": {
     "reviewedBy": null,
     "reviewedOn": null,
-    "sources": []
+    "sources": [
+      "Kuo, M. Omphalotus illudens. MushroomExpert.Com. https://www.mushroomexpert.com/omphalotus_illudens.html",
+      "Mushroom Observer. https://mushroomobserver.org/",
+      "French, A.L. & Garrettson, L.K. (1988). Poisoning with the North American jack o'lantern mushroom, Omphalotus illudens. Journal of Toxicology: Clinical Toxicology 26(1-2). https://www.tandfonline.com/doi/abs/10.3109/15563658808995399"
+    ]
   }
 }

@@ -90,29 +90,42 @@ Nothing in `data/species/` is reviewed. `review.reviewedBy` is `null` in every
 file, `npm run validate` reports it as `UNREVIEWED`, and `--strict` fails on it.
 Per `CLAUDE.md` rule 4 that field is filled in by a human or not at all.
 
+Ground truth for taxonomic descriptions is **MushroomExpert.com** and
+**MushroomObserver.org**, ratified as standing sources and cited per page in
+`review.sources`. Two rules follow, and they are in `CLAUDE.md`: do not coarsen
+a source to fit the vocabulary — extend the vocabulary instead; and do not
+assert what a source does not say. MushroomExpert carries no toxicity
+information by policy, so `toxinNotes` always needs its own citation.
+
+Ratifying a source is not review. `review.reviewedBy` stays null regardless.
+
 ### Open questions for the mycologist
 
 Each is written into the `ecologyNotes` of the file it affects:
 
-1. **Spore print colour resolution.** All three members are recorded as `white`;
-   all three are really white to pale yellow. That coarsening is what makes the
-   spore print a red herring in this set, and the red herring is the point — so
-   it needs confirming, not assuming. Adding a `cream` value to the vocabulary
-   is the alternative, and it would not change the lesson.
-2. **Odor of *C. appalachiensis*.** Recorded as `apricot`, which is the safe
-   direction rather than the certain one: descriptions run from fruity to not
-   distinctive, and recording `none` would stop odor separating it from
-   *Omphalotus*. Reasoning is in the file.
-3. **Gill edge on a smooth hymenium.** *C. lateritius* is recorded as
-   `blunt-forking`, but a genuinely smooth hymenium arguably has no edge to
-   read. Omitting the feature is the honest encoding — an examination would
-   return `not-applicable`, which is real evidence — but the validator requires
-   every member of a set to define every discriminator, so `gills.edge` would
-   have to leave the discriminator list.
-4. **Which name for the smooth chanterelle**, *Cantharellus* or *Craterellus*.
+1. **Is a pale pinkish yellow spore print distinguishable from a white-to-creamy
+   one, on paper?** This is the load-bearing one. *C. lateritius* is recorded
+   `pale-yellow` and *C. appalachiensis* `white, cream`, which makes the spore
+   print the only character separating the two chanterelles. If the difference
+   is not readable in practice, widen *lateritius* and the print goes back to
+   being a red herring. Whether the vocabulary needs a `pinkish-yellow` value
+   is the same question.
+2. **Growth habit as a tendency.** The sources say chanterelles *rarely* grow in
+   dense clusters and the jack-o'-lantern is *usually* clustered — and both
+   chanterelles are recorded as forming small or loose clusters. The schema has
+   no way to say "usually", so growth habit separates nothing categorically and
+   sits in `redHerrings`. If it should carry weight, the schema needs a way to
+   express typical versus possible.
+3. **Gill edge values.** `blunt-forking` for *C. appalachiensis* and `sharp` for
+   *Omphalotus* rest on general morphology; neither page describes edges.
+   *C. lateritius* has no `gills.edge` at all, which is why the feature is not a
+   discriminator in this set.
+4. **`toxinNotes` for *Omphalotus*** is the one piece of text where being wrong
+   has a body count, and it is not covered by the ratified description sources.
 5. **The large golden chanterelle** of the *C. cibarius* group has no entry. If
    it fruits alongside these two, it needs one.
-6. **Phenology windows** for both chanterelles are approximate.
+6. **Phenology windows** are month ranges derived from bare seasonal words
+   ("Summer", "Late summer and fall") and want narrowing to Kentucky.
 
 `gbifTaxonKey` and `inatTaxonId` are deliberately absent. They deep-link a user
 outward to a real taxon page, and a wrong key sends them to the wrong mushroom.
