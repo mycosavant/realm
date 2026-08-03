@@ -8,4 +8,5 @@ export * from './availability';
 export * from './specimen';
 export * from './examination';
 export * from './scoring';
+export * from './session';
 export * from './progression';
