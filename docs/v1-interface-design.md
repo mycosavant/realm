@@ -1,10 +1,10 @@
 # v1 interface design — the playable loop
 
-Status: **revision 2, proposal.** Revision 1 was reviewed by an architecture
-pass, an adversarial pass and a mycology pass. All three found real defects; the
-central argument of revision 1 did not survive. What follows is what is left
-after those corrections, and it ends with one decision that has to be made
-before any code is written.
+Status: **revision 2. Step 0 is built; steps 1–5 are still proposal.** Revision
+1 was reviewed by an architecture pass, an adversarial pass and a mycology pass.
+All three found real defects; the central argument of revision 1 did not
+survive. What follows is what is left after those corrections, and it ends with
+one decision that has to be made before step 1 can start.
 
 ## What this has to achieve
 
@@ -36,22 +36,65 @@ data/         content, including character diagrams
 ```
 
 `src/content/` is a bundler feature and cannot live in `game/`. It does not
-re-validate at runtime; CI already gates that.
+re-validate at runtime; CI already gates that — with one caveat found while
+building it, below.
 
-### The purity test is weaker than it claimed
+### The purity test is weaker than it claimed — built
 
-`tests/purity.test.ts` is described in this repo as checking a load-bearing rule
-rather than trusting it. Measured, it catches **none** of `import 'three'` (no
-`from`, so both regexes miss it), `from "react"` (double quotes), or
-`await import('zustand')`. `readdirSync` is non-recursive, so a future
-`src/game/session/` subdirectory would be entirely unchecked, and nothing
-follows what `data/` itself imports.
+`tests/purity.test.ts` was described in this repo as checking a load-bearing
+rule rather than trusting it. Measured, it caught **none** of `import 'three'`
+(no `from`, so both regexes missed), `from "react"` (double quotes), or
+`await import('zustand')`. `readdirSync` was non-recursive, so a future
+`src/game/session/` subdirectory would have gone entirely unchecked, and nothing
+followed what `data/` itself imports.
 
-Replace it with a closure walk: from every `.ts` under `src/game` recursively,
-resolve relative specifiers and follow them, assert every file reached is under
-`src/game/` or `data/`, and assert zero bare package specifiers anywhere in the
-closure. Still `fs` and regex, no new dependency, and it subsumes all three
-current checks. This is step zero.
+Replaced with a closure walk in `tests/purity-walk.ts`: from every `.ts` under
+`src/game` recursively, resolve relative specifiers and follow them, assert
+every file reached is under `src/game/` or `data/`, and assert zero bare package
+specifiers anywhere in the closure. Still `fs` and regex, no new dependency, and
+it subsumes all three previous checks.
+
+Two things the plan did not anticipate:
+
+- **The walk had to be injectable.** It reads through a `read` callback so the
+  checker can be pointed at synthetic files that genuinely break the rule. That
+  is the whole difference between this version and the last one, which was never
+  run against a violation and so was wrong for months. Nine of its tests are
+  leaks it must catch, including a transitive one through `data/`.
+- **It needed a comment stripper, and found that out the hard way.** The first
+  version reported `data/schema.ts` as importing a package called
+  `clustered-fused` — `export const FEATURE_VALUES = {` matched forward to the
+  comment reading *"'clustered' is separate from 'clustered-fused'"*. A repo
+  whose comments discuss packages and whose data files are full of quoted
+  strings cannot be checked by a regex that does not know which is which. There
+  is now a small string-aware stripper, and the false positive is a test.
+
+A walk that resolves nothing passes vacuously, so there is also an assertion
+that the closure actually reached `data/schema.ts` and `data/examinations.ts`.
+
+### The two loaders have to be checked against each other — built
+
+`src/content/index.ts` globs `data/` into a `SpeciesIndex`. "CI gates the
+content" is a claim about the shipped bundle only if the glob and the
+validator's `readdirSync` see the same files, and nothing made them agree.
+`tests/content-loader.test.ts` asserts they do, file for file.
+
+Two smaller consequences:
+
+- Content is sorted by id rather than left in glob order, so that a seeded
+  forage cannot reproduce differently across bundlers.
+- `App.tsx` imports the loader. Without a live import the module tree-shakes
+  away and `npm run build` succeeds whether or not `data/` reaches a browser at
+  all — the build went from 15 to 20 modules when it was wired in, which is the
+  measurement that the pipeline exists.
+
+### `foragingStatus` cannot reach the interface — built
+
+`tests/ui-boundaries.test.ts` fails if anything outside `src/game/` mentions
+`foragingStatus`, `toxinNotes`, `FORAGING_STATUSES`, or any of the five status
+literals, and pins `toxinNotes` to a single read inside the `hardStop` branch.
+The word "edible" is deliberately not banned: the disclaimer has to be able to
+say the app will not tell you what is edible.
 
 ## The session belongs in `game/` — with four corrections
 
@@ -242,8 +285,8 @@ alongside the existing CI checks.
 
 ## Build order
 
-**0.** Closure-based purity test. `foragingStatus` UI lint. `src/content/`
-runtime loader.
+**0. Done.** Closure-based purity test. `foragingStatus` UI lint. `src/content/`
+runtime loader. 103 tests, and the production bundle now carries `data/`.
 
 **1.** `src/game/session.ts` with `sessionView` and derived actions;
 `candidatesGivenObservations`; `VALUE_LABELS`. All pure, all tested.
@@ -280,3 +323,23 @@ This is not a Phase 4 polish question. It decides the shape of `Session`, what
 `ExaminationResult` carries, whether `evidenceRatio` means "checked" or "read
 correctly", and whether Phase 3 is worth ten minutes of a mycologist's time.
 Nothing should be built past step 0 until it is answered.
+
+**Recommendation: the hybrid.** Categorical characters — `stem.ring: absent`,
+`substrate: hardwood-dead` — return text, because there is no perceptual skill
+in them and making the player squint at a picture of a ring teaches nothing. The
+characters the ratified sources themselves describe as judgment calls return a
+depiction, and the player records their own reading:
+
+- **`spore.print`.** Kuo calls the pale end "perplexing"; the shipped set turns
+  on `pinkish-yellow` against `white`/`cream`, readable only on dark paper.
+- **`hymenium.type`.** *"Sort of a continuum... sometimes one must make a
+  judgment call."* This is the first discriminator of the only shipped set.
+- **`bruising`.** "Bruising **slowly**" is a time series, not a state. Returning
+  the word `none` hands over the answer to a character whose whole difficulty is
+  waiting long enough.
+
+Everything else is text. That puts the diagrams exactly where the sources locate
+the skill, keeps `evidenceRatio` meaning "checked" for text characters and "read
+correctly" for depicted ones, and — the part that matters for scope — means
+steps 1 through 3 can be built now, because only three characters need art
+before the trainer is judgeable rather than all twenty-two.
