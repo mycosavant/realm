@@ -137,16 +137,58 @@ export function sessionView(s: Session): SessionView;
    needs `tools` on the session, which revision 1 described in prose and omitted
    from the type. `'already-committed'` was missing entirely.
 
-### The function the loop needs does not exist
+### The function the loop needs does not exist — built
 
 `candidateSpecies(specimen, confusionSet, index)` filters on every discriminator
 the **individual** will give up, against the specimen's ground truth. Player
 evidence never enters it. A "candidates remaining" panel backed by it renders
 the correct species before the player clicks anything.
 
-The loop needs `candidatesGivenObservations(performed, confusionSet, index)` —
-narrowing on values the player actually paid for. It is new work in `game/`, and
-it was not in revision 1's build order.
+`candidatesGivenObservations(performed, confusionSet, index)` narrows on values
+the player actually paid for. It weighs the three examination outcomes
+differently — `observed` narrows to members carrying that value,
+`not-applicable` narrows to members that lack the character entirely (this is
+what resolves *C. lateritius*, whose smooth hymenium has no gill edge to read),
+and `unavailable` narrows nothing, because the player spent an action and the
+individual gave up no reading. Best match rather than strict elimination, so the
+buried-root trap does not delete the right answer from the panel.
+
+#### The asymmetry trap has a second floor
+
+Writing its tests turned up a property nobody had stated, and the first version
+of the test asserted the opposite of it.
+
+A red herring is validated on species value sets **overlapping**. The player
+sees one *realised* value. Where the sets overlap without being identical, the
+character narrows in one direction and not the other.
+
+`growth.habit` in the shipped set is exactly this. The chanterelles carry
+solitary, scattered and clustered; *Omphalotus* carries only clustered. So:
+
+- **`solitary` really does exclude the jack-o'-lantern.** Reporting otherwise
+  would be lying to the player about a true inference.
+- **`clustered` excludes nobody**, because chanterelles cluster too.
+
+That is the whole lesson of the set, and the panel now shows it directly: the
+same character resolves the question or fails to, depending on which way it
+lands. Red herrings whose members share an identical value — every member
+decurrent, every member solid — narrow nothing whatever the player sees, and
+four of the five shipped red herrings are that kind.
+
+The validator is not wrong and does not change. CLAUDE.md's rule is a statement
+about species value sets and remains true. What is new is that "red herring"
+does not mean "carries no information to the player", and any panel or teaching
+note that says so is overclaiming.
+
+### Value labels — built
+
+`VALUE_LABELS` in `data/schema.ts`, keyed by feature and **not** flat. The first
+draft was flat and wrong: `none` is "no colour change" under `bruising` and "no
+distinct smell" under `odor`; `absent` is "no stem at all" under `stem.base` and
+"no ring" under `stem.ring`; `brown` is a spore print colour and also a bruising
+reaction. Three collisions in fifty-two values, and a flat map silently picks
+one. `tests/vocabulary.test.ts` enumerates the shared values and fails if any
+two characters give one the same prose.
 
 ## Forage generation: mechanism in `game/`, tuning in `data/`
 
@@ -288,8 +330,11 @@ alongside the existing CI checks.
 **0. Done.** Closure-based purity test. `foragingStatus` UI lint. `src/content/`
 runtime loader. 103 tests, and the production bundle now carries `data/`.
 
-**1.** `src/game/session.ts` with `sessionView` and derived actions;
-`candidatesGivenObservations`; `VALUE_LABELS`. All pure, all tested.
+**1.** `candidatesGivenObservations` and `VALUE_LABELS` are **done** — neither
+depends on the open decision. `src/game/session.ts` with `sessionView` and
+derived actions is the part that does depend on it, and is the only thing left
+in this step: whether a recorded observation carries the player's reading or the
+ground-truth value is precisely what the decision settles.
 
 **2.** `src/game/forage.ts` + `data/forays/` + validator extension — traps are
 data from day one, including the buried-root trap.
