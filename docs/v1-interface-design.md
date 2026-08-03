@@ -471,3 +471,46 @@ Worth noting for the action economy complaint: `hymenium.type` costs **0** and i
 the hardest character in the game to read. Perceptual difficulty and action cost
 are orthogonal — the same shape as the cost/medium finding above — so the
 economy gets its teeth from the reading model rather than from the price list.
+
+## Open, and live today: declining is under-rewarded
+
+The adversarial pass on `session.ts` found this and it is the most important
+thing outstanding. It is not caused by the reading model and it is not waiting
+on the flip — it is reachable in the shipped build.
+
+`grade()` decides `underdetermined` by applying **every reachable
+discriminator** to the specimen. It never asks which of them the player actually
+checked. So:
+
+> A player meets an Appalachian chanterelle. They spend three actions — the most
+> expensive thing in the game — on a spore print. It comes back `white`, which
+> genuinely cannot separate that chanterelle from the jack-o'-lantern; both taxa
+> carry white and cream, and the teaching note says in as many words that this is
+> "the one pairing the print cannot resolve... the pair a forager is most likely
+> to be holding, and the pair where being wrong costs the most."
+>
+> On the evidence they hold, the specimen is not resolvable. They decline. They
+> are awarded **`XP_UNNECESSARY_DECLINE` — 25 of 100** — and told "This
+> individual was resolvable."
+
+That is the app docking a beginner three quarters of the credit for correctly
+refusing to guess on the dangerous pair. CLAUDE.md rule 5 says declining an
+under-determined specimen is a full-credit answer; the implementation reads
+"under-determined" as a fact about the specimen when the player experiences it as
+a fact about their evidence.
+
+The fix is not obvious and it is a scoring decision, not a refactor. Roughly:
+`underdetermined` should be evaluated against the discriminators the player
+checked, not every reachable one — but then a player who checks nothing and
+declines is also "under-determined", and `XP_UNNECESSARY_DECLINE` exists
+precisely to stop declining being a free 100. Both readings have a defensible
+case and they trade off against each other, which is why this is written down
+rather than changed.
+
+Two constraints on whichever way it goes:
+
+- **Hesitation must never cost more than confidence.** A wrong ID already scores
+  zero. A defensible decline scoring 25 while a lucky guess scores 5 is close
+  enough to be worth checking deliberately.
+- It must stay true once readings can be wrong, because the misread-then-decline
+  case is the same bug with a second cause.

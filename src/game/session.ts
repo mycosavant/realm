@@ -7,10 +7,16 @@ import {
   type FeatureId,
   type Grade,
   type IdAttempt,
+  type ReadingMode,
   type Specimen,
   type ToolId,
 } from '../../data/schema';
-import { applyExamination, type ExaminationResult, type ExaminationStatus } from './examination';
+import {
+  applyExamination,
+  totalActionCost,
+  type ExaminationResult,
+  type ExaminationStatus,
+} from './examination';
 import { candidatesGivenObservations, grade, type SpeciesIndex } from './scoring';
 
 /**
@@ -39,7 +45,7 @@ export interface Observation extends ExaminationResult {
    */
   reading?: string;
   /** Copied from the examination so an observation is self-describing. */
-  readingMode: 'given' | 'judged';
+  readingMode: ReadingMode;
 }
 
 export interface Session {
@@ -91,14 +97,7 @@ export function startSession(
  * for double-checking.
  */
 export function actionsSpent(session: Session): number {
-  const seen = new Set<FeatureId>();
-  let total = 0;
-  for (const observation of session.performed) {
-    if (seen.has(observation.feature)) continue;
-    seen.add(observation.feature);
-    total += observation.actionCost;
-  }
-  return total;
+  return totalActionCost(session.performed);
 }
 
 export function actionsRemaining(session: Session): number {
@@ -126,8 +125,13 @@ export function canExamine(
   return { ok: true };
 }
 
-/** Observations that have a value the player has committed to reading. */
-function settled(performed: readonly Observation[]): ExaminationResult[] {
+/**
+ * Observations the player has committed to a reading of, with that reading in
+ * place of the truth. Exported because a caller wanting `candidatesGivenObser-
+ * vations` off a session must go through this — handing it `performed` directly
+ * would narrow on ground truth the player has not interpreted.
+ */
+export function settledObservations(performed: readonly Observation[]): ExaminationResult[] {
   return performed
     .filter((o) => o.status !== 'observed' || o.reading !== undefined)
     .map((o) => (o.status === 'observed' ? { ...o, value: o.reading } : o));
@@ -137,6 +141,12 @@ export interface Misreading {
   feature: FeatureId;
   reading: string;
   truth: string;
+  /**
+   * Whether reading it correctly would have left a different set of candidates
+   * standing. A misreading can be entirely inconsequential, and saying otherwise
+   * is worse than saying nothing — see `misreadingFeedback`.
+   */
+  consequential: boolean;
 }
 
 /**
@@ -146,25 +156,55 @@ export interface Misreading {
  * now because the alternative is discovering at art time that `Session` cannot
  * express the case.
  */
-export function misreadings(performed: readonly Observation[]): Misreading[] {
-  return performed.flatMap((o) =>
-    o.status === 'observed' && o.reading !== undefined && o.value !== undefined && o.reading !== o.value
-      ? [{ feature: o.feature, reading: o.reading, truth: o.value }]
-      : [],
-  );
+export function misreadings(
+  performed: readonly Observation[],
+  ctx: SessionContext,
+): Misreading[] {
+  const asRead = candidatesGivenObservations(settledObservations(performed), ctx.confusionSet, ctx.index);
+
+  return performed.flatMap((o) => {
+    if (o.status !== 'observed' || o.reading === undefined || o.value === undefined) return [];
+    if (o.reading === o.value) return [];
+
+    const corrected = candidatesGivenObservations(
+      settledObservations(performed.map((other) => (other === o ? { ...other, reading: other.value } : other))),
+      ctx.confusionSet,
+      ctx.index,
+    );
+
+    return [
+      {
+        feature: o.feature,
+        reading: o.reading,
+        truth: o.value,
+        consequential: corrected.join() !== asRead.join(),
+      },
+    ];
+  });
 }
 
 /**
  * Feedback for a misread character. Separate from `Grade.feedback` because it
  * says something different: not "you were wrong" but "you gathered the right
  * evidence and read it wrong", which is a better mistake and a fixable one.
+ *
+ * The consequential branch is gated for a reason that is specific to this
+ * curriculum. The one pairing the spore print cannot resolve is the Appalachian
+ * chanterelle against the jack-o'-lantern — both carry white and cream — and
+ * that is the pair a forager is most likely to be holding and the pair where
+ * being wrong costs the most. Telling a player who misread white as cream that
+ * "the evidence was there" would teach them to trust the print on exactly the
+ * pairing the teaching note says it fails.
  */
 export function misreadingFeedback(found: readonly Misreading[]): string[] {
-  return found.map(
-    (m) =>
+  return found.map((m) => {
+    const opening =
       `You recorded the ${FEATURE_LABELS[m.feature]} as "${valueLabel(m.feature, m.reading)}". ` +
-      `This one is "${valueLabel(m.feature, m.truth)}" — the evidence was there and the reading is what missed it.`,
-  );
+      `This one is "${valueLabel(m.feature, m.truth)}"`;
+    return m.consequential
+      ? `${opening} — the evidence was there and the reading is what missed it.`
+      : `${opening}. It happens not to change what is still standing here, which is worth knowing about this character: it does not separate every pair in this set.`;
+  });
 }
 
 function examine(session: Session, feature: FeatureId): Session {
@@ -218,9 +258,19 @@ function commit(session: Session, answer: IdAttempt['answer'], ctx: SessionConte
 
   const attempt: IdAttempt = {
     specimenId: session.specimen.id,
-    // Looking is the graded behaviour, so every examination counts — including
-    // one that came back unavailable, and one the player has not yet read.
-    featuresChecked: [...new Set(session.performed.map((o) => o.feature))],
+    // Looking is the graded behaviour, so an `unavailable` outcome counts: the
+    // player did everything they could and the individual gave up nothing. An
+    // *observed* character the player never read is different — they stopped
+    // short of interpreting evidence they had paid for, and counting it would
+    // pay full evidence credit for work not done. Unreachable while everything
+    // ships `given`; wrong the day anything does not.
+    featuresChecked: [
+      ...new Set(
+        session.performed
+          .filter((o) => o.status !== 'observed' || o.reading !== undefined)
+          .map((o) => o.feature),
+      ),
+    ],
     answer,
   };
 
@@ -256,6 +306,7 @@ export interface ObservationView {
   actionCost: number;
   destructive: boolean;
   note?: string;
+  readingMode: ReadingMode;
   /** Observed, `judged`, and the player has not decided yet. */
   awaitingReading: boolean;
 }
@@ -267,8 +318,6 @@ export interface SessionView {
   tools: readonly ToolId[];
   observations: readonly ObservationView[];
   awaitingReading: readonly FeatureId[];
-  /** Members still standing given what the player believes, not what is true. */
-  candidateSpeciesIds: string[];
   committed: boolean;
   grade: Grade | null;
   /** Empty until commit. Revealing a misreading earlier would be the answer. */
@@ -286,10 +335,20 @@ export interface SessionView {
  * with `value` stripped and the player's own reading in its place — so the cost
  * model cannot be bypassed by accident, and a misreading stays a misreading
  * on screen until the verdict.
+ *
+ * It deliberately carries **no candidate list**. A "candidates remaining" panel
+ * reads as the obvious thing to build here and it is a trap twice over. The
+ * design doc rejects it on principle — showing surviving candidates leaks the
+ * answer — and `candidatesGivenObservations` has a failure window that makes it
+ * worse than a leak: argmax over a single observation is strict elimination, so
+ * one free look at the substrate of a jack-o'-lantern fruiting from a buried
+ * root removes the toxic species from the shortlist, at zero cost, on the exact
+ * character the teaching note says counterfeits itself. Callers that want the
+ * list can call the function and own that caveat.
  */
 export function sessionView(session: Session, ctx: SessionContext): SessionView {
   const committed = session.committed !== null;
-  const found = committed ? misreadings(session.performed) : [];
+  const found = committed ? misreadings(session.performed, ctx) : [];
 
   return {
     specimenId: session.specimen.id,
@@ -308,17 +367,13 @@ export function sessionView(session: Session, ctx: SessionContext): SessionView 
         actionCost: o.actionCost,
         destructive: o.destructive,
         ...(o.note !== undefined ? { note: o.note } : {}),
+        readingMode: o.readingMode,
         awaitingReading: awaiting,
       };
     }),
     awaitingReading: session.performed
       .filter((o) => o.status === 'observed' && o.reading === undefined)
       .map((o) => o.feature),
-    candidateSpeciesIds: candidatesGivenObservations(
-      settled(session.performed),
-      ctx.confusionSet,
-      ctx.index,
-    ),
     committed,
     grade: session.grade,
     misreadings: found,

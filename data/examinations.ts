@@ -7,22 +7,31 @@ import type { Examination, FeatureId } from './schema';
  *
  * Every character ships `reading: 'given'`, and that is a sequencing decision
  * rather than a design one. The session machinery records the player's reading
- * separately from the truth either way, so flipping `hymenium.type` and
- * `spore.print` to `judged` is a change to this file and nothing else.
+ * separately from the truth either way, so flipping a character to `judged` is
+ * a change to this file and one deliberate tripwire in `tests/session.test.ts`.
  *
  * Two things have to land first, and neither is code:
  *
  *  1. **The art.** A `judged` character needs a depiction, and a depiction is a
  *     factual assertion rendered at maximum confidence — nobody reads a picture
- *     sceptically. It goes through the review gate like any other content.
- *  2. **A scoring decision.** Once a reading can be wrong, a player can misread
- *     a character, correctly conclude from what they saw that the specimen is
- *     under-determined, and decline. Today `grade()` scores that as an
+ *     sceptically. It goes through the review gate like any other content. The
+ *     candidates are `hymenium.type` and `spore.print`: the two characters the
+ *     ratified sources themselves call judgment calls. `bruising` was a third
+ *     candidate and is not one, because all three shipped taxa record `none` —
+ *     there is nothing to depict until a taxon that bruises is added.
+ *  2. **A scoring pass on declining.** Once a reading can be wrong, a player can
+ *     misread a character, correctly conclude from what they saw that the
+ *     specimen is under-determined, and decline. `grade()` scores that as an
  *     unnecessary decline, because it judges resolvability against ground truth
  *     the player never had. Docking XP there teaches a forager to commit when
- *     unsure, which is the worst reflex this app could install. With every
- *     character `given`, reading always equals truth and the case cannot
- *     arise — so the flip is what is blocked, not the build.
+ *     unsure, which is the worst reflex this app could install.
+ *
+ *     That second one is **not** created by the flip. `grade()` already measures
+ *     `underdetermined` against every *reachable* discriminator rather than the
+ *     ones the player actually checked, so a player who honestly cannot resolve
+ *     a specimen on the evidence they gathered is already docked to
+ *     `XP_UNNECESSARY_DECLINE` today. The flip widens an open hole; it does not
+ *     dig it. See docs/v1-interface-design.md.
  */
 export const EXAMINATIONS: Record<FeatureId, Examination> = {
   'growth.habit': {

@@ -174,7 +174,7 @@ describe('grade — declining', () => {
     expect(result.correctlyDeclined).toBe(false);
     expect(result.xp).toBe(XP_UNNECESSARY_DECLINE);
     expect(result.feedback.join(' ')).toMatch(/resolvable/i);
-    expect(result.feedback.join(' ')).toMatch(/false-ridges/);
+    expect(result.feedback.join(' ')).toMatch(/false gills: blunt, forking ridges/);
   });
 
   it('pays full marks for declining between the two chanterelles', () => {
@@ -223,7 +223,7 @@ describe('grade — being wrong', () => {
     expect(result.xp).toBe(0);
     expect(result.hardStop?.speciesId).toBe(JACK_O_LANTERN.id);
     expect(result.hardStop?.message).toBe(JACK_O_LANTERN.toxinNotes);
-    expect(result.feedback.join(' ')).toMatch(/would have told you: gills/);
+    expect(result.feedback.join(' ')).toMatch(/would have told you: thin, blade-like gills/);
   });
 
   it('stops the run for any wrong answer on a deadly specimen', () => {
