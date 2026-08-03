@@ -175,6 +175,114 @@ export const FEATURE_LABELS: Record<FeatureId, string> = {
   'growth.habit': 'growth habit',
 };
 
+/**
+ * Human-readable names for the *values*, not the features.
+ *
+ * Without this table an interface renders `soil-mycorrhizal` and
+ * `blunt-forking` raw at a beginner, possibly a child. Every value in
+ * `FEATURE_VALUES` needs an entry — a missing one is a raw identifier on
+ * screen, so `tests/content.test.ts` checks coverage both ways.
+ *
+ * These are written as what a person standing over the mushroom would see, not
+ * as what the character means. `soil-mycorrhizal` is the sharpest case: the id
+ * names an inference about the fungus's biology that nobody can observe, while
+ * the label names the observable — and the observable is exactly what the
+ * buried-root trap counterfeits. That mismatch is a known vocabulary problem,
+ * recorded in docs/v1-interface-design.md; the label must not repeat it.
+ */
+export const VALUE_LABELS: Record<FeatureId, Record<string, string>> = {
+  // The character the first confusion set turns on.
+  'hymenium.type': {
+    gills: 'thin, blade-like gills',
+    'false-ridges': 'false gills: blunt, forking ridges',
+    pores: 'a spongy layer of pores',
+    teeth: 'hanging teeth or spines',
+    smooth: 'smooth, or with shallow wrinkles',
+    'pits-ridges': 'a pitted, honeycombed surface',
+  },
+  'gills.attachment': {
+    free: 'not reaching the stem',
+    adnate: 'broadly attached to the stem',
+    adnexed: 'narrowly attached to the stem',
+    decurrent: 'running down the stem',
+  },
+  'gills.edge': {
+    sharp: 'a sharp, thin edge',
+    'blunt-forking': 'a blunt edge that forks',
+  },
+  // The pale end is fine-grained on purpose. These four are told apart on dark
+  // paper and barely at all on white.
+  'spore.print': {
+    white: 'white',
+    cream: 'cream',
+    'pale-yellow': 'pale yellow',
+    'pinkish-yellow': 'pale pinkish yellow',
+    pink: 'pink',
+    brown: 'brown',
+    rust: 'rust brown',
+    black: 'black',
+    olive: 'olive',
+  },
+  'stem.base': {
+    volva: 'a cup or sac around the very base',
+    bulbous: 'a swollen, bulb-like base',
+    equal: 'the same width all the way down',
+    absent: 'no stem at all',
+    lateral: 'a stem set off to one side',
+  },
+  'stem.ring': {
+    present: 'a ring on the stem',
+    absent: 'no ring',
+  },
+  'flesh.section': {
+    'hollow-single': 'hollow, one single chamber',
+    'chambered-cottony': 'stuffed with cottony chambers',
+    solid: 'solid all through',
+    zoned: 'banded in layers',
+  },
+  // Slow reactions are the norm here, not the exception — see the examination
+  // label, which tells the player to bruise it and wait.
+  bruising: {
+    none: 'no colour change',
+    blue: 'bruises blue',
+    red: 'bruises red',
+    brown: 'bruises brown',
+    latex: 'bleeds a milky latex',
+  },
+  odor: {
+    none: 'no distinct smell',
+    apricot: 'sweet, like apricots',
+    farinaceous: 'like fresh meal or cut cucumber',
+    phenolic: 'chemical, like ink or disinfectant',
+    anise: 'sweet, like aniseed',
+  },
+  substrate: {
+    'soil-mycorrhizal': 'from soil, not from wood',
+    'hardwood-dead': 'on dead hardwood — a stump, a log, or a buried root',
+    'hardwood-living': 'on a living hardwood tree',
+    conifer: 'on conifer wood',
+    dung: 'on dung',
+  },
+  'growth.habit': {
+    solitary: 'growing singly',
+    scattered: 'scattered, not touching',
+    clustered: 'in clusters',
+    'clustered-fused': 'in clusters, stem bases fused together',
+    shelving: 'in overlapping shelves',
+  },
+};
+
+/**
+ * The table is keyed by feature and not flat, because the same value means
+ * different things under different characters and a flat map would silently
+ * pick one. `none` is "no colour change" for `bruising` and "no distinct smell"
+ * for `odor`; `absent` is "no stem at all" for `stem.base` and "no ring" for
+ * `stem.ring`; `brown` is a spore print colour and also a bruising reaction.
+ */
+export function valueLabel(feature: FeatureId, value: string): string {
+  return VALUE_LABELS[feature]?.[value] ?? value;
+}
+
 export const FORAGING_STATUSES = [
   'commonly-eaten-when-confirmed',
   'toxic',

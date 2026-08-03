@@ -7,6 +7,7 @@ import {
   type Species,
   type Specimen,
 } from '../../data/schema';
+import type { ExaminationResult } from './examination';
 import { isAvailable } from './specimen';
 
 export type SpeciesIndex = Record<string, Species> | Map<string, Species>;
@@ -75,6 +76,83 @@ export function candidateSpecies(
     .map(({ speciesId, species }) => ({
       speciesId,
       score: reachable.filter((feature) => matchesFeature(species, feature, specimen)).length,
+    }));
+
+  if (scored.length === 0) return [];
+  const best = Math.max(...scored.map((entry) => entry.score));
+  return scored.filter((entry) => entry.score === best).map((entry) => entry.speciesId);
+}
+
+/**
+ * Members still standing given what the player has actually paid to see.
+ *
+ * `candidateSpecies` above answers a different question — who is left once
+ * *every* reachable discriminator is applied — and it reads the specimen's
+ * ground truth directly. Player evidence never enters it. Backing a "candidates
+ * remaining" panel with it would render the correct species before the player
+ * clicks anything, which is why this exists separately.
+ *
+ * The three examination outcomes carry different weight, and collapsing them
+ * would be the bug:
+ *
+ *  - `observed`       — narrows to members whose recorded values include it.
+ *  - `not-applicable` — narrows to members that do not have the character at
+ *                       all. This is the one that resolves *C. lateritius*:
+ *                       a smooth hymenium has no gill edge to read, and the
+ *                       other two members define one.
+ *  - `unavailable`    — narrows nothing. The player spent an action and the
+ *                       individual gave up no reading. It still counts as
+ *                       checked for `evidenceRatio`; it just cannot exclude
+ *                       anybody.
+ *
+ * Best match rather than strict elimination, for the same reason as above: a
+ * jack-o'-lantern on a buried root reads as growing from soil, and strict
+ * elimination would delete the right answer from the panel and tell the player
+ * it is a chanterelle. A tie means the evidence so far singles nobody out.
+ *
+ * Red herrings are not filtered out, and one consequence is worth stating
+ * because it is easy to assert the opposite. A validated red herring is one
+ * whose members' value sets *overlap* — not one whose members are identical.
+ * The player observes a single realised value, so a red herring still narrows
+ * whenever the value they happened to see lies outside some member's set.
+ *
+ * `growth.habit` in the shipped set is exactly this: the chanterelles carry
+ * solitary, scattered and clustered, *Omphalotus* carries only clustered. A
+ * solitary specimen really is inconsistent with a jack-o'-lantern, and saying
+ * otherwise would be lying to the player. The information runs one way only,
+ * which is the whole lesson — `solitary` excludes the jack-o'-lantern, while
+ * `clustered` excludes nobody, because chanterelles cluster too. A panel that
+ * refuses to narrow on a clustered specimen is teaching precisely the inference
+ * the teaching note names as dangerous.
+ *
+ * Red herrings whose members share an identical value — every member decurrent,
+ * every member solid — narrow nothing, whatever the player sees.
+ */
+export function candidatesGivenObservations(
+  performed: readonly ExaminationResult[],
+  confusionSet: ConfusionSet,
+  index: SpeciesIndex,
+): string[] {
+  const informative = performed.filter((result) => result.status !== 'unavailable');
+
+  const consistent = (species: Species, result: ExaminationResult): boolean => {
+    const groundTruth = species.features[result.feature];
+    const defined = groundTruth !== undefined && groundTruth.length > 0;
+
+    if (result.status === 'not-applicable') return !defined;
+    // A member with no recorded value for a character cannot be excluded by an
+    // observation of it — the same rule `matchesFeature` applies, and the same
+    // reason: silence in the data is missing information, not a mismatch.
+    if (!defined) return true;
+    return result.value !== undefined && groundTruth.includes(result.value);
+  };
+
+  const scored = confusionSet.memberSpeciesIds
+    .map((speciesId) => ({ speciesId, species: lookup(index, speciesId) }))
+    .filter((entry): entry is { speciesId: string; species: Species } => entry.species !== undefined)
+    .map(({ speciesId, species }) => ({
+      speciesId,
+      score: informative.filter((result) => consistent(species, result)).length,
     }));
 
   if (scored.length === 0) return [];
