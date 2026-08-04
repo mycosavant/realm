@@ -11,13 +11,36 @@ export type FeatureId =
   | 'substrate'            // soil-mycorrhizal | hardwood-dead | hardwood-living | conifer | dung
   | 'growth.habit';        // solitary | scattered | clustered | clustered-fused | shelving
 
+export type ToolId = 'knife' | 'paper' | 'loupe';
+
+/**
+ * Whether the player judges the value or the game states it.
+ *
+ * These are two different games and the difference is not cosmetic. `given`
+ * hands over a value: there is no perceptual skill in noticing whether a stem
+ * has a ring, and making someone squint at a picture of one teaches nothing.
+ * `judged` hands over something to interpret and takes the player's reading,
+ * which can be wrong — and being wrong, acting on it, and finding out at the
+ * verdict is the thing an identification trainer is for.
+ *
+ * Reserve `judged` for characters the ratified sources themselves describe as
+ * judgment calls. Kuo on pale spore prints: "perplexing." On the gills/ridges
+ * distinction: "sort of a continuum... sometimes one must make a judgment
+ * call." Those are the places the skill actually lives.
+ *
+ * Everything ships as `given` in v1 — see the note on EXAMINATIONS.
+ */
+export type ReadingMode = 'given' | 'judged';
+
 /** How the player obtains a feature value. Cost creates the game's tension. */
 export interface Examination {
   feature: FeatureId;
   label: string;              // "Take a spore print"
   actionCost: number;         // 0 = free look, 3 = overnight spore print
-  requiresTool?: 'knife' | 'paper' | 'loupe';
+  requiresTool?: ToolId;
   destructive: boolean;       // teaches restraint / leave-no-trace
+  /** Cost and perceptual difficulty are orthogonal: `hymenium.type` is free. */
+  reading: ReadingMode;
 }
 
 export interface Species {

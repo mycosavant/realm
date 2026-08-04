@@ -1,10 +1,12 @@
 # v1 interface design — the playable loop
 
-Status: **revision 2. Step 0 is built; steps 1–5 are still proposal.** Revision
-1 was reviewed by an architecture pass, an adversarial pass and a mycology pass.
-All three found real defects; the central argument of revision 1 did not
-survive. What follows is what is left after those corrections, and it ends with
-one decision that has to be made before step 1 can start.
+Status: **revision 2. Steps 0 and 1 are built; steps 2–5 are still proposal.**
+Revision 1 was reviewed by an architecture pass, an adversarial pass and a
+mycology pass. All three found real defects; the central argument of revision 1
+did not survive. What follows is what is left after those corrections. The
+decision it used to end on — what an examination hands the player — is settled,
+and the closing section records both the answer and why the question was framed
+wrongly.
 
 ## What this has to achieve
 
@@ -96,16 +98,21 @@ literals, and pins `toxinNotes` to a single read inside the `hardStop` branch.
 The word "edible" is deliberately not banned: the disclaimer has to be able to
 say the app will not tell you what is edible.
 
-## The session belongs in `game/` — with four corrections
+## The session belongs in `game/` — with four corrections — built
 
 The recommendation stands; the sketch in revision 1 did not survive contact.
 
 ```ts
+export interface Observation extends ExaminationResult {
+  reading?: string;              // what the player recorded — never `value`
+  readingMode: 'given' | 'judged';
+}
+
 export interface Session {
   specimen: Specimen;
   actionBudget: number;
   tools: readonly ToolId[];
-  performed: ExaminationResult[];
+  performed: readonly Observation[];
   committed: IdAttempt | null;
   grade: Grade | null;
 }
@@ -113,8 +120,11 @@ export interface Session {
 export interface SessionContext { confusionSet: ConfusionSet; index: SpeciesIndex; }
 
 export function applySessionEvent(s: Session, e: SessionEvent, ctx: SessionContext): Session;
-export function sessionView(s: Session): SessionView;
+export function sessionView(s: Session, ctx: SessionContext): SessionView;
 ```
+
+`sessionView` takes the context too, because the candidates panel is derived
+from content and there is no honest way to compute it without.
 
 1. **Content arrives as context, not as an id.** `grade()` takes a
    `ConfusionSet` object and a `SpeciesIndex`; `recordAttempt` takes the set as
@@ -330,11 +340,9 @@ alongside the existing CI checks.
 **0. Done.** Closure-based purity test. `foragingStatus` UI lint. `src/content/`
 runtime loader. 103 tests, and the production bundle now carries `data/`.
 
-**1.** `candidatesGivenObservations` and `VALUE_LABELS` are **done** — neither
-depends on the open decision. `src/game/session.ts` with `sessionView` and
-derived actions is the part that does depend on it, and is the only thing left
-in this step: whether a recorded observation carries the player's reading or the
-ground-truth value is precisely what the decision settles.
+**1. Done.** `candidatesGivenObservations`, `VALUE_LABELS`, and
+`src/game/session.ts` with `sessionView`, derived actions, and the two-value
+observation. All pure, all tested.
 
 **2.** `src/game/forage.ts` + `data/forays/` + validator extension — traps are
 data from day one, including the buried-root trap.
@@ -347,7 +355,7 @@ text UI. **Milestone: the content and the scoring are playable and judgeable.**
 
 **5.** The forage scene, if at all.
 
-## The decision that blocks everything
+## The decision that blocked everything — settled
 
 **What does an examination give the player, and what does the key show before
 they commit?**
@@ -388,3 +396,121 @@ the skill, keeps `evidenceRatio` meaning "checked" for text characters and "read
 correctly" for depicted ones, and — the part that matters for scope — means
 steps 1 through 3 can be built now, because only three characters need art
 before the trainer is judgeable rather than all twenty-two.
+
+### What was settled, and why it was a better question than the one asked
+
+The framing above collapses two separate dials into one. Split apart:
+
+1. **What the examination shows** — a string, or something to interpret.
+2. **What the session records** — the truth, or the player's reading.
+
+Three of the four combinations are coherent. Show text and record truth: a quiz.
+Show a depiction and record the reading: a trainer. Show a depiction and record
+the truth: you drew the picture and then read it *for* the player, which is
+strictly worse than the quiz because it also cost art.
+
+The resolution is to record **both**, always. `ExaminationResult.value` stays
+the individual's truth; `Observation.reading` is what the player put down;
+`sessionView` exposes only the latter. Two things then become separately
+scorable, and collapsing them was breaking rule 5:
+
+- **Did you look?** — the action economy and `evidenceRatio`. Evidence over
+  correctness.
+- **Did you read it right?** — the perceptual skill, which is what a trainer
+  trains.
+
+`grade()` structurally could not tell those apart, because it never saw a
+reading. Concretely: a player spends three actions — the most expensive thing in
+the game — takes a spore print on *C. lateritius*, reads `pinkish-yellow` as
+`cream` on white paper, and calls *C. appalachiensis*. Today that scores zero and
+the feedback says "not the Appalachian chanterelle, this is the smooth
+chanterelle", which is true and useless. What it should say is: *your evidence
+was sound and your reading of it is what missed*. That sentence is only writable
+if both values exist.
+
+And the misreading is worse than picking the wrong chanterelle. `cream` is inside
+the *jack-o'-lantern's* range too, so one misread character eliminates the
+specimen's own species and readmits the toxic one. There is a test for exactly
+that.
+
+**The rule that follows, and it is not negotiable:** a misreading must never make
+hesitation more expensive than confidence. Punishing caution caused by a
+perceptual error teaches a forager to commit when unsure, which is the worst
+reflex this app could install.
+
+#### Which makes it a data decision, not an architectural one
+
+The mode lives in `data/examinations.ts` beside `actionCost` and `requiresTool`.
+Every observation goes through identical machinery; the flag decides who
+supplies the reading. **Everything ships `given` in v1** — that is the quiz,
+playable and judgeable on content and scoring — and flipping `hymenium.type` and
+`spore.print` to `judged` is a change to that one file.
+
+Two things gate the flip, and neither is code:
+
+1. **The art.** Four spore print values are in play across shipped species
+   (white, cream, pale-yellow, pinkish-yellow) times two paper backgrounds, plus
+   three hymenium values (gills, false-ridges, smooth). Eleven images, through
+   the review gate like any other content.
+2. **The scoring decision above.** With every character `given`, reading always
+   equals truth, so the decline-after-misreading case cannot arise. The flip is
+   what is blocked, not the build.
+
+`bruising` drops out of the v1 art budget entirely: all three shipped taxa record
+`none`, so there is nothing to depict. Which surfaces its own finding — that
+examination costs an action, is destructive, and in the shipped curriculum can
+only ever return "no change". Defensible as a restraint lesson; worth knowing it
+is currently a tax.
+
+`substrate` does not need a depiction either, because the trap is already
+modelled one level down: `substrateOverride` makes the *individual* genuinely
+present as soil. The player reads correctly and the evidence is honestly
+misleading. That is a different lesson from misperception, and it already works.
+
+Worth noting for the action economy complaint: `hymenium.type` costs **0** and is
+the hardest character in the game to read. Perceptual difficulty and action cost
+are orthogonal — the same shape as the cost/medium finding above — so the
+economy gets its teeth from the reading model rather than from the price list.
+
+## Open, and live today: declining is under-rewarded
+
+The adversarial pass on `session.ts` found this and it is the most important
+thing outstanding. It is not caused by the reading model and it is not waiting
+on the flip — it is reachable in the shipped build.
+
+`grade()` decides `underdetermined` by applying **every reachable
+discriminator** to the specimen. It never asks which of them the player actually
+checked. So:
+
+> A player meets an Appalachian chanterelle. They spend three actions — the most
+> expensive thing in the game — on a spore print. It comes back `white`, which
+> genuinely cannot separate that chanterelle from the jack-o'-lantern; both taxa
+> carry white and cream, and the teaching note says in as many words that this is
+> "the one pairing the print cannot resolve... the pair a forager is most likely
+> to be holding, and the pair where being wrong costs the most."
+>
+> On the evidence they hold, the specimen is not resolvable. They decline. They
+> are awarded **`XP_UNNECESSARY_DECLINE` — 25 of 100** — and told "This
+> individual was resolvable."
+
+That is the app docking a beginner three quarters of the credit for correctly
+refusing to guess on the dangerous pair. CLAUDE.md rule 5 says declining an
+under-determined specimen is a full-credit answer; the implementation reads
+"under-determined" as a fact about the specimen when the player experiences it as
+a fact about their evidence.
+
+The fix is not obvious and it is a scoring decision, not a refactor. Roughly:
+`underdetermined` should be evaluated against the discriminators the player
+checked, not every reachable one — but then a player who checks nothing and
+declines is also "under-determined", and `XP_UNNECESSARY_DECLINE` exists
+precisely to stop declining being a free 100. Both readings have a defensible
+case and they trade off against each other, which is why this is written down
+rather than changed.
+
+Two constraints on whichever way it goes:
+
+- **Hesitation must never cost more than confidence.** A wrong ID already scores
+  zero. A defensible decline scoring 25 while a lucky guess scores 5 is close
+  enough to be worth checking deliberately.
+- It must stay true once readings can be wrong, because the misread-then-decline
+  case is the same bug with a second cause.

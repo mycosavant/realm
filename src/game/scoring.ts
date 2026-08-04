@@ -1,5 +1,6 @@
 import {
   FEATURE_LABELS,
+  valueLabel,
   type ConfusionSet,
   type FeatureId,
   type Grade,
@@ -105,10 +106,17 @@ export function candidateSpecies(
  *                       checked for `evidenceRatio`; it just cannot exclude
  *                       anybody.
  *
- * Best match rather than strict elimination, for the same reason as above: a
- * jack-o'-lantern on a buried root reads as growing from soil, and strict
- * elimination would delete the right answer from the panel and tell the player
- * it is a chanterelle. A tie means the evidence so far singles nobody out.
+ * Best match rather than strict elimination — but read the limit before putting
+ * this on a screen. Argmax over a *single* observation is strict elimination,
+ * because the one member the observation contradicts scores zero and everyone
+ * else scores one. On the buried-root trap that means one free look at the
+ * substrate deletes the jack-o'-lantern outright, on the exact character the
+ * teaching note says counterfeits itself. It recovers at two observations and
+ * resolves correctly at three, so `grade()` — which applies every reachable
+ * discriminator — is unaffected. A live panel driven off the first look is not.
+ *
+ * This is why `sessionView` does not carry candidates. A tie means the evidence
+ * so far singles nobody out.
  *
  * Red herrings are not filtered out, and one consequence is worth stating
  * because it is easy to assert the opposite. A validated red herring is one
@@ -255,7 +263,7 @@ export function grade(
       if (settling.length > 0) {
         const feature = settling[0];
         feedback.push(
-          `The ${FEATURE_LABELS[feature]} alone would have settled it: ${specimen.observedFeatures[feature]}.`,
+          `The ${FEATURE_LABELS[feature]} alone would have settled it: ${valueLabel(feature, specimen.observedFeatures[feature]!)}.`,
         );
       }
       if (missedDiscriminators.length > 0) {
@@ -294,7 +302,7 @@ export function grade(
     if (missedSettling.length > 0) {
       const feature = missedSettling[0];
       feedback.push(
-        `The ${FEATURE_LABELS[feature]} would have told you: ${specimen.observedFeatures[feature]}.`,
+        `The ${FEATURE_LABELS[feature]} would have told you: ${valueLabel(feature, specimen.observedFeatures[feature]!)}.`,
       );
     }
 
@@ -316,7 +324,7 @@ export function grade(
   if (misleading.length > 0) {
     const feature = misleading[0];
     feedback.push(
-      `Note the ${FEATURE_LABELS[feature]} on this one: "${specimen.observedFeatures[feature]}" does not fit ${specimenName}. A single character can lie; the weight of the rest is what settles it.`,
+      `Note the ${FEATURE_LABELS[feature]} on this one: "${valueLabel(feature, specimen.observedFeatures[feature]!)}" does not fit ${specimenName}. A single character can lie; the weight of the rest is what settles it.`,
     );
   }
 
