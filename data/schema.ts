@@ -66,7 +66,17 @@ export interface Species {
   phenology: { startMonth: number; endMonth: number };
 
   /** CI fails if this is missing. Review is structural, not aspirational. */
-  review: { reviewedBy: string | null; reviewedOn: string | null; sources: string[] };
+  review: ContentReview;
+}
+
+/**
+ * A human signature on a claim about the real world. `reviewedBy: null` means
+ * unreviewed, which is reported as UNREVIEWED and fails `--strict`.
+ */
+export interface ContentReview {
+  reviewedBy: string | null;
+  reviewedOn: string | null;
+  sources: string[];
 }
 
 /** The actual curriculum unit. */
@@ -103,6 +113,12 @@ export interface ForaySpeciesWeight {
  * has to be one another member of the set actually carries — otherwise it
  * counterfeits nobody and teaches nothing.
  *
+ * **The mechanism runs one way.** Buried wood and roots make a wood-dweller look
+ * terrestrial; nothing makes a mycorrhizal fungus look lignicolous, because it
+ * has no way to fruit from a log. A trap in that direction would teach that a
+ * mushroom on dead hardwood might be an edible chanterelle, which is the single
+ * inference the first confusion set exists to prevent. The validator refuses it.
+ *
  * The rate lives here and not in the species file on purpose. `chance: 0.35`
  * inside `omphalotus-illudens.json` would put a game number into a document
  * whose reviewer is checking it against MushroomExpert. Different document,
@@ -126,9 +142,15 @@ export interface ForayTrap {
  * in `src/game/forage.ts` and is pure, so a seed reproduces a forest exactly.
  *
  * `month` gates which members fruit, and the curriculum is genuinely seasonal:
- * in the shipped set the three taxa overlap in August alone. A foray may cover
- * fewer members than its confusion set — but only because nature left them out,
- * never because the author did. The validator holds that line.
+ * as the shipped species files record it, the three taxa overlap in August
+ * alone — though those phenology windows are themselves flagged for review, so
+ * that is a fact about the data before it is a fact about the woods. A foray may
+ * cover fewer members than its confusion set, but only because nature left them
+ * out, never because the author did. The validator holds that line.
+ *
+ * A foray carries a `review` block because a trap rate is a claim about what an
+ * individual can present, and no structural check can tell a realistic trap from
+ * a dangerous one.
  */
 export interface Foray {
   id: string;
@@ -142,6 +164,7 @@ export interface Foray {
   traps: ForayTrap[];
   /** Author-facing: why this month, these weights, this trap rate. */
   designNote: string;
+  review: ContentReview;
 }
 
 /**

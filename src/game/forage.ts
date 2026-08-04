@@ -18,12 +18,28 @@ import { generateSpecimen, type GenerateSpecimenOptions } from './specimen';
  * because changing it silently reshuffles every saved seed.
  */
 export function generatePatch(rng: Rng, foray: Foray, index: SpeciesIndex): Specimen[] {
+  if (!Number.isInteger(foray.month)) {
+    // A fractional month silently drops taxa through `fruitsInMonth`.
+    throw new Error(`foray "${foray.id}" has a non-integer month ${foray.month}`);
+  }
+
+  const seen = new Set<string>();
   const weighted = foray.speciesWeights.map((entry) => {
+    // Every one of these is caught in a *file* by the validator. They are
+    // re-checked here for the same reason phenology is: a silently thinner
+    // patch is the failure that looks like a working app, and a caller
+    // synthesising a foray at runtime never went past the validator.
     const species = lookupSpecies(index, entry.speciesId);
     if (!species) {
-      // A silently thinner patch is the failure that looks like a working app.
+      throw new Error(`foray "${foray.id}" weights unknown species "${entry.speciesId}"`);
+    }
+    if (seen.has(entry.speciesId)) {
+      throw new Error(`foray "${foray.id}" weights "${entry.speciesId}" twice`);
+    }
+    seen.add(entry.speciesId);
+    if (!Number.isFinite(entry.weight) || entry.weight <= 0) {
       throw new Error(
-        `foray "${foray.id}" weights unknown species "${entry.speciesId}"`,
+        `foray "${foray.id}" weights "${entry.speciesId}" at ${entry.weight} — a non-positive weight silently rewrites the patch`,
       );
     }
     return { species, weight: entry.weight };
@@ -41,7 +57,14 @@ export function generatePatch(rng: Rng, foray: Foray, index: SpeciesIndex): Spec
     );
   }
 
-  const entries = inSeason.map(({ species, weight }) => [species, weight] as const);
+  // Sorted by id before it reaches `pickWeighted`, whose cumulative walk is
+  // order-sensitive. Without this, alphabetising the `speciesWeights` array in a
+  // content file is a silent reshuffle of every saved seed — the same failure
+  // `src/content/index.ts` sorts to avoid, on the array that actually drives the
+  // patch rather than the one that happens to be enumerated by the bundler.
+  const entries = [...inSeason]
+    .sort((a, b) => a.species.id.localeCompare(b.species.id))
+    .map(({ species, weight }) => [species, weight] as const);
   const trapBySpeciesId = new Map(foray.traps.map((trap) => [trap.speciesId, trap]));
 
   const patch: Specimen[] = [];

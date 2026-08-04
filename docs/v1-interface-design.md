@@ -233,6 +233,11 @@ teaching note calls dangerous is not even present. A test pins the one-month
 window, because a phenology edit that widened it would quietly change what the
 flagship foray teaches.
 
+That window is a fact about the data before it is a fact about the woods. Both
+chanterelle phenologies are flagged `OPEN QUESTION FOR REVIEW` in their species
+files — June–August is the source's bare *"Summer"*, read narrowly — so widening
+either one widens the curriculum. The test is where a reviewer finds that out.
+
 Gating is enforced twice, and that is deliberate rather than redundant. The
 validator refuses to let a file weight a species that does not fruit in its
 month — otherwise the file asserts a species the engine will silently drop.
@@ -244,45 +249,88 @@ entitled to the rule.
 
 - **A foray may cover fewer members than its confusion set only because nature
   left them out, never because the author did.** Every in-season member must be
-  weighted. Without this, dropping the jack-o'-lantern from an August foray
-  yields a patch where every specimen is edible and a player who learns "orange
-  means chanterelle" — and the file reads like an ordinary curriculum. A June
-  foray covering only the two chanterelles passes, because in June that is true.
-- **A trap has to counterfeit somebody.** `presentsSubstrate` must be a value the
-  species does not grow on (or the trap is a no-op that reads as a trap) *and*
-  one another species in the same patch does grow on (or the individual presents
-  a character nobody in the set has, which is noise rather than a lesson).
+  weighted, *and* weighted heavily enough that the expected count in one patch is
+  at least one. Presence in the list is not enough: `1` against `1000` is the
+  same omission as `0` with a rounding error in front of it, and it leaves the
+  toxic member out of 996 forays in 1000. Without the rule, dropping the
+  jack-o'-lantern from an August foray yields a patch where every specimen is
+  edible and a player who learns "orange means chanterelle" — and the file reads
+  like an ordinary curriculum. A June foray covering only the two chanterelles
+  passes, because in June that is true.
+- **A trap has to counterfeit somebody, in the direction that has a mechanism.**
+  `presentsSubstrate` must be a value the species does not grow on (or the trap
+  is a no-op that reads as a trap) *and* one another species in the same patch
+  does grow on (or the individual presents a character nobody in the set has,
+  which is noise rather than a lesson) — *and* the trapped species must not be
+  mycorrhizal. Buried wood and roots make a wood-dweller look terrestrial;
+  nothing makes a mycorrhizal fungus fruit from a log. Symmetric rules accepted
+  the mirror image, where a chanterelle presents as growing on dead hardwood and
+  the app tells the player the *wood* was the character that lied. That is the
+  single inference this confusion set exists to prevent.
 
 ### What the trap actually does to the player, measured
 
-The teaching note's claims are now tested rather than asserted. On a trapped
-jack-o'-lantern: one look at the substrate, read correctly, deletes the toxic
-species from the shortlist. The underside and the odor get it back. `grade()`,
-which applies every reachable discriminator at once instead of one at a time,
-resolves the individual and names the character that lied.
+The teaching note's claims are tested rather than asserted, over the whole
+trapped population rather than one convenient individual. One look at the
+substrate, read correctly, deletes the toxic species from the shortlist. The
+underside and the odor get it back. `grade()`, which applies every reachable
+discriminator at once instead of one at a time, resolves the individual and names
+the character that lied.
 
-On a **button** it does not recover, and this is the case worth knowing about.
-The underside has not opened, the spore print is blank, and what is left is a
-lying substrate against a truthful odor — one character each way. The individual
-is genuinely unresolvable, `grade()` says so, and declining scores 100. That is
-rule 5 working, and it is the one place in the shipped content where the
-full-credit decline is reachable without contrivance.
+Getting there needed a scoring fix, and it is the sharpest thing this step turned
+up. **A trapped individual contradicts every member of its set** — true gills say
+"not a chanterelle", apparent soil says "not a jack-o'-lantern", and nobody
+satisfies both. `candidateSpecies` scores members by how many reachable
+discriminators they match and returns the argmax, so it returned *everyone,
+tied*, exactly as it does when everyone fits perfectly. Those are opposite
+epistemic situations and `grade()` could not tell them apart. Measured on the
+shipped foray: **144 of 4000 specimens** were reported to the player as leaving
+species "equally possible" that the visible hymenium excludes outright, and a
+player who checked all four discriminators, read true gills and correctly said
+jack-o'-lantern was paid **25 XP and told the evidence could not have told them
+that** — while declining paid 100 and answering *chanterelle* ended the run.
 
-### Forays are not review-gated, and neither are confusion sets
+`consistentSpecies` now answers the strict question, and the three cases are
+separate: one member consistent is resolvable; two or more is genuinely
+ambiguous; **none is contradictory**, and a contradictory individual is resolvable
+exactly when some single reachable character still cuts the set to the species in
+hand. That is what a forager does — the underside outranks the substrate — and it
+is what the trap is for. The same measurement now returns 0, and the correct ID
+pays 100 with "a single character can lie" attached.
 
-A foray file asserts things about the woods: that a third of jack-o'-lanterns
-present as rising from bare ground, that August is the right month. It carries no
-`review` block — matching `data/confusion-sets/`, which carries none either.
+A **button** is the interesting sub-case and it is not the one first assumed. The
+underside has not opened and there is no print to take, so the reading is a lying
+substrate against a truthful odor — one character each way, which best-match ties
+and the strict question resolves: no chanterelle is odourless, so the odor alone
+settles it. Contradictory and resolvable at once. The full-credit decline is
+reachable elsewhere in the shipped content — a trapped individual picked with no
+underside and no odor left really does narrow to the two chanterelles, neither of
+them the species in hand, and declining there pays 100 while a correct answer
+pays 25, which is honest.
 
-That is consistent, and it is also a gap. CLAUDE.md rule 4 names `data/species/`,
-and the two-tier gate follows it exactly, so the single most load-bearing piece
-of prose in the repo — the confusion set's `teachingNote`, which is where the
-safety argument actually lives — ships with no reviewer attached. Extending the
-gate is a policy decision, not a refactor; it is recorded here rather than taken.
+### Forays are review-gated; confusion sets still are not
 
-In the meantime the foray requires a `designNote` on the file and on every trap,
-and the shipped one says in as many words that its numbers are invented and that
-nobody has measured how often the buried-root trap actually happens.
+A foray asserts things about the woods: that a third of jack-o'-lanterns present
+as rising from bare ground, that August is the right month. The first draft gave
+it no `review` block, on the grounds of consistency with `data/confusion-sets/`,
+which has none.
+
+That was the wrong call and the trap-direction rule above is why. No structural
+check can tell a realistic trap from a dangerous one — the mycorrhizal rule
+catches the one direction with no mechanism, and everything else is a judgement
+about the woods. So `Foray` carries a `review` block on the same two tiers as a
+species file: `reviewedBy: null` is UNREVIEWED and fails `--strict`. Per rule 4 it
+ships null.
+
+**Confusion sets remain ungated, and that is now the outstanding gap.** CLAUDE.md
+rule 4 names `data/species/`, and the `teachingNote` — where the safety argument
+for the whole set actually lives — has no reviewer attached. Extending the gate
+there is a policy decision rather than a refactor, so it is recorded rather than
+taken.
+
+The foray also requires a `designNote` on the file and on every trap, and the
+shipped one says in as many words that its numbers are invented and that nobody
+has measured how often the buried-root trap actually happens.
 
 ## Depiction: what revision 1 got wrong
 
@@ -407,9 +455,9 @@ runtime loader. 103 tests, and the production bundle now carries `data/`.
 `src/game/session.ts` with `sessionView`, derived actions, and the two-value
 observation. All pure, all tested.
 
-**2. Done.** `src/game/forage.ts`, `data/forays/appalachian-august.json`, and
-`validateForay`. Traps are data from day one, including the buried-root trap.
-193 tests.
+**2. Done.** `src/game/forage.ts`, `data/forays/appalachian-august.json`,
+`validateForay`, and the contradictory-evidence fix in `grade()`. Traps are data
+from day one, including the buried-root trap. 205 tests.
 
 **3.** `src/state/` (one file, transport only), `src/persist/`, and the plain
 text UI. **Milestone: the content and the scoring are playable and judgeable.**

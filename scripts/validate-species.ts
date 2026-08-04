@@ -158,30 +158,45 @@ export function validateSpecies(raw: unknown, file: string): Issue[] {
     }
   }
 
-  if (!isRecord(raw.review)) {
+  issues.push(...validateReview(raw.review, file, 'species'));
+
+  return issues;
+}
+
+/**
+ * The two-tier gate itself, shared by every file that makes a claim about the
+ * real world. Structural problems are errors; an unsigned file is UNREVIEWED and
+ * fails only `--strict`, which is the release gate.
+ */
+export function validateReview(raw: unknown, file: string, kind: string): Issue[] {
+  const issues: Issue[] = [];
+  const error = (message: string) => issues.push({ level: 'error', file, message });
+
+  if (!isRecord(raw)) {
     error('review is required — review is structural, not aspirational');
+    return issues;
+  }
+
+  const { reviewedBy, reviewedOn, sources } = raw;
+  if (reviewedBy !== null && !isNonEmptyString(reviewedBy)) {
+    error('review.reviewedBy must be a name or null');
+  }
+  if (!Array.isArray(sources)) {
+    error('review.sources must be an array');
+  }
+  if (isNonEmptyString(reviewedBy)) {
+    if (!isNonEmptyString(reviewedOn) || !/^\d{4}-\d{2}-\d{2}$/.test(reviewedOn)) {
+      error('review.reviewedOn must be YYYY-MM-DD once reviewedBy is set');
+    }
+    if (!isStringArray(sources) || sources.length === 0) {
+      error(`a reviewed ${kind} must cite at least one source`);
+    }
   } else {
-    const { reviewedBy, reviewedOn, sources } = raw.review;
-    if (reviewedBy !== null && !isNonEmptyString(reviewedBy)) {
-      error('review.reviewedBy must be a name or null');
-    }
-    if (!Array.isArray(sources)) {
-      error('review.sources must be an array');
-    }
-    if (isNonEmptyString(reviewedBy)) {
-      if (!isNonEmptyString(reviewedOn) || !/^\d{4}-\d{2}-\d{2}$/.test(reviewedOn)) {
-        error('review.reviewedOn must be YYYY-MM-DD once reviewedBy is set');
-      }
-      if (!isStringArray(sources) || sources.length === 0) {
-        error('a reviewed species must cite at least one source');
-      }
-    } else {
-      issues.push({
-        level: 'unreviewed',
-        file,
-        message: 'review.reviewedBy is null — content is unreviewed and cannot ship',
-      });
-    }
+    issues.push({
+      level: 'unreviewed',
+      file,
+      message: 'review.reviewedBy is null — content is unreviewed and cannot ship',
+    });
   }
 
   return issues;
@@ -304,9 +319,20 @@ export function validateConfusionSet(
  *    is not. Quietly dropping the toxic member from an August foray produces a
  *    patch where every specimen is edible and a player who learns "orange means
  *    chanterelle" — and the file would read as a perfectly ordinary curriculum.
- *  - **A trap has to counterfeit somebody.** `presentsSubstrate` must be a value
- *    the species does not grow on (or it is a no-op) and that another species in
- *    the same patch does (or it counterfeits nobody and is just noise).
+ *    Presence in the list is not enough: a member weighted so lightly that the
+ *    player is not expected to meet one in a patch has been dropped with extra
+ *    steps, so the expected count per foray must be at least one.
+ *  - **A trap has to counterfeit somebody, in the direction that has a
+ *    mechanism.** `presentsSubstrate` must be a value the species does not grow
+ *    on (or it is a no-op) and that another species in the same patch does (or
+ *    it counterfeits nobody and is just noise) — and the trapped species must
+ *    not be mycorrhizal, because buried wood makes a wood-dweller look
+ *    terrestrial and nothing makes a mycorrhizal fungus look lignicolous. The
+ *    reverse trap would teach that a mushroom on dead hardwood might be an
+ *    edible chanterelle.
+ *
+ * Neither of those, nor anything else here, can tell a realistic trap rate from
+ * an invented one. That is what the `review` block is for.
  */
 export function validateForay(
   raw: unknown,
@@ -328,6 +354,10 @@ export function validateForay(
   if (!isNonEmptyString(raw.designNote)) {
     error('designNote is required — every number in this file is a game decision and has to say why');
   }
+  if ('edible' in raw) {
+    error('`edible` is forbidden — see CLAUDE.md non-negotiable 2. The app never renders a verdict.');
+  }
+  issues.push(...validateReview(raw.review, file, 'foray'));
 
   const month = raw.month;
   const monthOk = Number.isInteger(month) && (month as number) >= 1 && (month as number) <= 12;
@@ -351,6 +381,7 @@ export function validateForay(
   }
 
   const weighted = new Map<string, Species>();
+  const weightById = new Map<string, number>();
   for (const entry of raw.speciesWeights) {
     if (!isRecord(entry) || !isNonEmptyString(entry.speciesId)) {
       error('every speciesWeights entry needs a speciesId');
@@ -365,6 +396,8 @@ export function validateForay(
       error(
         `speciesWeights["${id}"].weight must be a positive number — a zero weight is an omission written to look like inclusion`,
       );
+    } else {
+      weightById.set(id, entry.weight);
     }
     const species = speciesById.get(id);
     if (!species) {
@@ -398,6 +431,22 @@ export function validateForay(
 
   if (weighted.size < 2) {
     error('a foray needs at least two species to spawn — one species is a specimen, not a confusion');
+  }
+
+  // Writing `1` against `1000` is the same omission as writing `0`, with a
+  // rounding error in front of it: the member is in the list and not in the
+  // woods. Expected count per patch is what "in the curriculum" actually means.
+  const totalWeight = [...weightById.values()].reduce((sum, weight) => sum + weight, 0);
+  const specimenCount = raw.specimenCount;
+  if (Number.isInteger(specimenCount) && (specimenCount as number) >= 1 && totalWeight > 0) {
+    for (const [id, weight] of weightById) {
+      const expected = ((specimenCount as number) * weight) / totalWeight;
+      if (expected < 1) {
+        error(
+          `"${id}" is expected ${expected.toFixed(2)} times in a patch of ${specimenCount} — a member the player will not reliably meet is dropped from the curriculum with extra steps. Raise its weight or the specimen count.`,
+        );
+      }
+    }
   }
 
   if (!Array.isArray(raw.traps)) {
@@ -446,6 +495,12 @@ export function validateForay(
     if (own.length === 0) {
       error(
         `traps["${id}"] overrides a substrate "${id}" does not record — that invents a character rather than counterfeiting one`,
+      );
+      continue;
+    }
+    if (own.includes('soil-mycorrhizal')) {
+      error(
+        `traps["${id}"] traps a mycorrhizal species, and the mechanism only runs the other way. Buried wood and roots make a wood-dweller look terrestrial; nothing makes a mycorrhizal fungus fruit from a log. A trap in this direction teaches that a mushroom growing on wood might be "${id}".`,
       );
       continue;
     }

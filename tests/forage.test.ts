@@ -4,12 +4,14 @@ import {
   fruitsInMonth,
   type FeatureId,
   type Foray,
+  type IdAttempt,
   type Species,
   type Specimen,
 } from '../data/schema';
 import {
   applyExamination,
   candidatesGivenObservations,
+  consistentSpecies,
   generatePatch,
   grade,
   makeRng,
@@ -37,6 +39,7 @@ function foray(overrides: Partial<Foray>): Foray {
     ],
     traps: [],
     designNote: 'test',
+    review: { reviewedBy: null, reviewedOn: null, sources: [] },
     ...overrides,
   };
 }
@@ -76,8 +79,46 @@ describe('generatePatch', () => {
     });
     const patch = generatePatch(makeRng(3), lopsided, SPECIES_INDEX);
     const jacks = patch.filter((s) => s.speciesId === JACK_O_LANTERN.id).length;
-    expect(jacks).toBeGreaterThan(150);
-    expect(jacks).toBeLessThan(200);
+    // 99% of 200. Not `< 200`: at this ratio the chanterelle is absent from
+    // 28 seeds in 200, so asserting it appears is a seed lottery rather than a
+    // statement about the weights.
+    expect(jacks).toBeGreaterThanOrEqual(190);
+  });
+
+  it('does not depend on the order speciesWeights happens to be written in', () => {
+    // pickWeighted walks the cumulative array in order, so without a sort inside
+    // generatePatch, alphabetising a content file silently invalidates every
+    // saved seed.
+    const forwards = foray({ specimenCount: 30 });
+    const backwards = foray({
+      specimenCount: 30,
+      speciesWeights: [...forwards.speciesWeights].reverse(),
+    });
+    expect(generatePatch(makeRng(9), forwards, SPECIES_INDEX)).toEqual(
+      generatePatch(makeRng(9), backwards, SPECIES_INDEX),
+    );
+  });
+
+  it('refuses the weights that would silently rewrite the patch', () => {
+    const negative = foray({
+      speciesWeights: [
+        { speciesId: CHANTERELLE.id, weight: -5 },
+        { speciesId: JACK_O_LANTERN.id, weight: 1 },
+      ],
+    });
+    expect(() => generatePatch(makeRng(1), negative, SPECIES_INDEX)).toThrow(/non-positive/);
+
+    const duplicated = foray({
+      speciesWeights: [
+        { speciesId: JACK_O_LANTERN.id, weight: 1 },
+        { speciesId: JACK_O_LANTERN.id, weight: 1 },
+      ],
+    });
+    expect(() => generatePatch(makeRng(1), duplicated, SPECIES_INDEX)).toThrow(/twice/);
+
+    expect(() => generatePatch(makeRng(1), foray({ month: 8.5 }), SPECIES_INDEX)).toThrow(
+      /non-integer month/,
+    );
   });
 
   it('throws rather than silently thinning the patch on an unknown species', () => {
@@ -124,8 +165,11 @@ describe('phenology gating', () => {
   });
 
   it('puts all three members of the shipped set in the woods in August, and only then', () => {
-    // Not a preference — the reason the shipped foray is an August foray. The
-    // window in which a forager can be confused by all three is one month wide.
+    // Not a preference — the reason the shipped foray is an August foray. This
+    // pins the data, not the woods: both chanterelle windows are flagged
+    // OPEN QUESTION FOR REVIEW in their species files (June–August is the
+    // source's bare "Summer", read narrowly), so a reviewer widening either one
+    // widens the curriculum and this test is where they will find that out.
     const members = [CHANTERELLE, SMOOTH_CHANTERELLE, JACK_O_LANTERN];
     const monthsWithAllThree = Array.from({ length: 12 }, (_, i) => i + 1).filter((month) =>
       members.every((species) => fruitsInMonth(species.phenology, month)),
@@ -198,98 +242,127 @@ describe('the buried-root trap', () => {
     }
   });
 
-  /** The first trapped individual across seeds that satisfies `wanted`. */
-  function findTrapped(wanted: (specimen: Specimen) => boolean): Specimen {
-    for (let seed = 0; seed < 40; seed += 1) {
-      const found = generatePatch(makeRng(seed), alwaysTrapped, SPECIES_INDEX).find(wanted);
-      if (found) return found;
-    }
-    throw new Error('no trapped specimen matching the predicate in 40 forays');
-  }
+  /**
+   * Every trapped individual across 40 forays, not the first convenient one.
+   * The first match is systematically the easy case — young, unweathered, odor
+   * intact — and the properties below are claims about the whole population.
+   */
+  const trappedPopulation: Specimen[] = Array.from({ length: 40 }, (_, seed) =>
+    generatePatch(makeRng(seed), alwaysTrapped, SPECIES_INDEX),
+  ).flat();
 
   const readable = (specimen: Specimen, ...features: FeatureId[]) =>
     features.every((feature) => !specimen.unavailableFeatures.includes(feature));
 
+  const callIt = (specimen: Specimen, answer: IdAttempt['answer']) =>
+    grade(
+      {
+        specimenId: specimen.id,
+        featuresChecked: ['hymenium.type', 'substrate', 'odor', 'spore.print'],
+        answer,
+      },
+      CHANTERELLE_SET,
+      specimen,
+      SPECIES_INDEX,
+    );
+
   it('costs the player the substrate character, and only that character', () => {
-    const specimen = findTrapped((candidate) =>
-      readable(candidate, 'substrate', 'hymenium.type', 'odor'),
+    const readableUnderside = trappedPopulation.filter((specimen) =>
+      readable(specimen, 'substrate', 'hymenium.type', 'odor'),
     );
+    expect(readableUnderside.length).toBeGreaterThan(100);
 
-    // One look at the substrate, read correctly, and the shortlist has deleted
-    // the species the player is actually holding — the toxic one.
-    const substrateOnly = [applyExamination(specimen, 'substrate')];
-    expect(substrateOnly[0].value).toBe('soil-mycorrhizal');
-    expect(
-      candidatesGivenObservations(substrateOnly, CHANTERELLE_SET, SPECIES_INDEX),
-    ).not.toContain(JACK_O_LANTERN.id);
+    for (const specimen of readableUnderside) {
+      // One look at the substrate, read correctly, and the shortlist has deleted
+      // the species the player is actually holding — the toxic one.
+      const substrateOnly = [applyExamination(specimen, 'substrate')];
+      expect(substrateOnly[0].value).toBe('soil-mycorrhizal');
+      expect(
+        candidatesGivenObservations(substrateOnly, CHANTERELLE_SET, SPECIES_INDEX),
+      ).not.toContain(JACK_O_LANTERN.id);
 
-    // The underside and the smell get it back, which is what the teaching note
-    // says they do. Nothing about the way it grows would have.
-    const withUnderside = [
-      ...substrateOnly,
-      applyExamination(specimen, 'hymenium.type'),
-      applyExamination(specimen, 'odor'),
-    ];
-    expect(candidatesGivenObservations(withUnderside, CHANTERELLE_SET, SPECIES_INDEX)).toEqual([
-      JACK_O_LANTERN.id,
-    ]);
+      // The underside and the smell get it back, which is what the teaching note
+      // says they do. Nothing about the way it grows would have.
+      const withUnderside = [
+        ...substrateOnly,
+        applyExamination(specimen, 'hymenium.type'),
+        applyExamination(specimen, 'odor'),
+      ];
+      expect(candidatesGivenObservations(withUnderside, CHANTERELLE_SET, SPECIES_INDEX)).toEqual([
+        JACK_O_LANTERN.id,
+      ]);
+    }
   });
 
-  it('is unrecoverable on a button, and declining is then the full-credit answer', () => {
-    // The recovery above needs the underside, and a button has not opened. What
-    // is left is a lying substrate against a truthful odor, one character each
-    // way, and the individual genuinely cannot be resolved. Rule 5 covers this:
-    // refusing to call it is worth full marks.
-    const specimen = findTrapped(
-      (candidate) => candidate.age === 'button' && readable(candidate, 'substrate', 'odor'),
-    );
-    expect(specimen.unavailableFeatures).toContain('hymenium.type');
+  it('never leaves grade() calling a gilled mushroom a possible chanterelle', () => {
+    // The regression that matters. A trapped individual contradicts every member
+    // of the set, so argmax ties everybody — and reading that tie as "equally
+    // possible" told a player holding true gills that it might be edible.
+    // `consistentSpecies` is what tells the two kinds of tie apart.
+    const gilled = trappedPopulation.filter((specimen) => readable(specimen, 'hymenium.type'));
+    expect(gilled.length).toBeGreaterThan(100);
 
-    const looked = [
-      applyExamination(specimen, 'substrate'),
-      applyExamination(specimen, 'odor'),
-      applyExamination(specimen, 'hymenium.type'),
-      applyExamination(specimen, 'spore.print'),
-    ];
-    expect(candidatesGivenObservations(looked, CHANTERELLE_SET, SPECIES_INDEX)).toHaveLength(3);
+    for (const specimen of gilled) {
+      const result = callIt(specimen, { kind: 'species', speciesId: JACK_O_LANTERN.id });
+      expect(result.underdetermined).toBe(false);
+      expect(result.correct).toBe(true);
+      expect(result.xp).toBe(100);
+      expect(result.feedback.join(' ')).not.toMatch(/equally possible/);
 
-    const result = grade(
-      {
-        specimenId: specimen.id,
-        featuresChecked: ['hymenium.type', 'substrate', 'odor', 'spore.print'],
-        answer: { kind: 'declined' },
-      },
-      CHANTERELLE_SET,
-      specimen,
-      SPECIES_INDEX,
-    );
-    expect(result.underdetermined).toBe(true);
-    expect(result.correctlyDeclined).toBe(true);
-    expect(result.xp).toBe(100);
+      // The contradiction only exists while the lie is readable. Picked off its
+      // substrate, a trapped individual is just an ordinary jack-o'-lantern.
+      if (readable(specimen, 'substrate')) {
+        expect(consistentSpecies(specimen, CHANTERELLE_SET, SPECIES_INDEX)).toEqual([]);
+        expect(result.feedback.join(' ')).toMatch(/A single character can lie/);
+      } else {
+        expect(consistentSpecies(specimen, CHANTERELLE_SET, SPECIES_INDEX)).toEqual([
+          JACK_O_LANTERN.id,
+        ]);
+      }
+    }
   });
 
-  it('does not stop grade() resolving the individual', () => {
-    // grade() applies every reachable discriminator at once rather than one at a
-    // time, so the lying character is outvoted. A player who checks all four and
-    // says jack-o'-lantern is right, and is told which character lied.
-    const specimen = findTrapped((candidate) =>
-      readable(candidate, 'substrate', 'hymenium.type', 'odor'),
+  it('still resolves on a button, through the odor alone', () => {
+    // The underside has not opened and there is no print to take, so what is
+    // left is a lying substrate against a truthful odor. That is enough: no
+    // chanterelle is odourless. A trapped button is contradictory and resolvable
+    // at the same time, which is the pair `candidateSpecies` alone cannot state.
+    const buttons = trappedPopulation.filter(
+      (specimen) => specimen.age === 'button' && readable(specimen, 'substrate'),
     );
+    expect(buttons.length).toBeGreaterThan(0);
 
-    const result = grade(
-      {
-        specimenId: specimen.id,
-        featuresChecked: ['hymenium.type', 'substrate', 'odor', 'spore.print'],
-        answer: { kind: 'species', speciesId: JACK_O_LANTERN.id },
-      },
-      CHANTERELLE_SET,
-      specimen,
-      SPECIES_INDEX,
+    for (const specimen of buttons) {
+      expect(specimen.unavailableFeatures).toContain('hymenium.type');
+      expect(specimen.unavailableFeatures).toContain('spore.print');
+      // Buttons never weather past 0.25, so the odor is always still there.
+      expect(readable(specimen, 'odor')).toBe(true);
+
+      expect(consistentSpecies(specimen, CHANTERELLE_SET, SPECIES_INDEX)).toEqual([]);
+      const result = callIt(specimen, { kind: 'species', speciesId: JACK_O_LANTERN.id });
+      expect(result.underdetermined).toBe(false);
+      expect(result.xp).toBe(100);
+    }
+  });
+
+  it('leaves the player without grounds when only the lying character is readable', () => {
+    // Substrate readable, everything that could contradict it gone. Now the set
+    // really has narrowed — to the two chanterelles, neither of which is what the
+    // player is holding. Calling it correctly here is a guess and pays like one,
+    // and declining is the full-credit answer.
+    const blind = trappedPopulation.filter(
+      (specimen) =>
+        readable(specimen, 'substrate') &&
+        !readable(specimen, 'hymenium.type') &&
+        !readable(specimen, 'odor'),
     );
-
-    expect(result.correct).toBe(true);
-    expect(result.candidateSpeciesIds).toEqual([JACK_O_LANTERN.id]);
-    expect(result.feedback.join(' ')).toMatch(/A single character can lie/);
+    for (const specimen of blind) {
+      expect(consistentSpecies(specimen, CHANTERELLE_SET, SPECIES_INDEX)).not.toContain(
+        JACK_O_LANTERN.id,
+      );
+      expect(callIt(specimen, { kind: 'declined' }).xp).toBe(100);
+      expect(callIt(specimen, { kind: 'species', speciesId: JACK_O_LANTERN.id }).xp).toBe(25);
+    }
   });
 });
 

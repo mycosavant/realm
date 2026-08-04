@@ -16,6 +16,7 @@ import {
   AUGUST_FORAY,
   CHANTERELLE,
   CHANTERELLE_SET,
+  FIXTURE_MOREL,
   JACK_O_LANTERN,
   SMOOTH_CHANTERELLE,
 } from './fixtures';
@@ -45,6 +46,10 @@ describe('shipped content', () => {
   it('is entirely unreviewed — Claude never signs off on content', () => {
     const unreviewed = issues.filter((issue) => issue.level === 'unreviewed');
     expect(unreviewed.map((issue) => issue.file).sort()).toEqual([
+      // The foray is gated too. Its trap rate is a claim about what an
+      // individual can present, and no structural check can tell a realistic
+      // trap from one that teaches a mushroom on wood might be a chanterelle.
+      'forays/appalachian-august.json',
       'species/cantharellus-appalachiensis.json',
       'species/cantharellus-lateritius.json',
       'species/omphalotus-illudens.json',
@@ -362,5 +367,108 @@ describe('validateForay', () => {
     const found = check(broken);
     expect(found).toMatch(/designNote is required — every number/);
     expect(found).toMatch(/asserts how often this happens in the woods/);
+  });
+
+  it('rejects a member weighted so lightly the player never meets it', () => {
+    // The way round rule (a) if presence in the list were enough: write 1
+    // against 1000 and the toxic member is absent from 996 forays in 1000.
+    const broken = valid();
+    weights(broken)[0].weight = 1000;
+    weights(broken)[1].weight = 1000;
+    weights(broken)[2].weight = 1;
+    expect(check(broken)).toMatch(/dropped from the curriculum with extra steps/);
+  });
+
+  it('accepts a lopsided ratio that still puts every member in the patch', () => {
+    const skewed = valid();
+    weights(skewed)[0].weight = 2;
+    weights(skewed)[1].weight = 2;
+    weights(skewed)[2].weight = 4;
+    expect(check(skewed)).toBe('');
+  });
+
+  it('rejects a trap on a mycorrhizal species, whichever substrate it presents', () => {
+    // The dangerous mirror image of the shipped trap. Buried wood makes a
+    // wood-dweller look terrestrial; nothing makes a chanterelle fruit from a
+    // log, so this one teaches that a mushroom on dead hardwood might be edible.
+    for (const presents of ['hardwood-dead', 'hardwood-living']) {
+      const broken = valid();
+      broken.traps = [
+        {
+          speciesId: CHANTERELLE.id,
+          presentsSubstrate: presents,
+          chance: 0.35,
+          designNote: 'x',
+        },
+      ];
+      expect(check(broken)).toMatch(/the mechanism only runs the other way/);
+    }
+  });
+
+  it('rejects a trap on a species that records no substrate at all', () => {
+    const thin = structuredClone(JACK_O_LANTERN);
+    delete thin.features.substrate;
+    const index = new Map(speciesIndex).set(thin.id, thin);
+    expect(
+      messages(errors(validateForay(valid(), index, confusionSetIndex, file))),
+    ).toMatch(/invents a character rather than counterfeiting one/);
+  });
+
+  it('rejects a species that is not a member of the named set', () => {
+    const index = new Map(speciesIndex).set(FIXTURE_MOREL.id, FIXTURE_MOREL);
+    const broken = valid();
+    weights(broken).push({ speciesId: FIXTURE_MOREL.id, weight: 4 });
+    expect(messages(errors(validateForay(broken, index, confusionSetIndex, file)))).toMatch(
+      /is not a member of confusion set/,
+    );
+  });
+
+  it('rejects the same species trapped twice', () => {
+    const broken = valid();
+    traps(broken).push(structuredClone(traps(broken)[0]));
+    expect(check(broken)).toMatch(/traps lists .* twice/);
+  });
+
+  it('reports an unreviewed foray, and never as a structural error', () => {
+    const found = validateForay(valid(), speciesIndex, confusionSetIndex, file);
+    expect(errors(found)).toEqual([]);
+    expect(found.map((issue) => issue.level)).toContain('unreviewed');
+  });
+
+  it('rejects an `edible` field here too', () => {
+    const broken = valid();
+    broken.edible = false;
+    expect(check(broken)).toMatch(/forbidden/);
+  });
+
+  it('rejects the shapes that are not a foray at all', () => {
+    expect(check([] as unknown as Record<string, unknown>)).toMatch(/not an object/);
+
+    const missing = valid();
+    delete missing.id;
+    delete missing.title;
+    delete missing.confusionSetId;
+    missing.specimenCount = 0;
+    const found = check(missing);
+    expect(found).toMatch(/id is required/);
+    expect(found).toMatch(/title is required/);
+    expect(found).toMatch(/confusionSetId is required/);
+    expect(found).toMatch(/specimenCount must be a positive integer/);
+
+    const notArrays = valid();
+    notArrays.speciesWeights = {};
+    expect(check(notArrays)).toMatch(/speciesWeights must be an array/);
+
+    const noTraps = valid();
+    noTraps.traps = 'none';
+    expect(check(noTraps)).toMatch(/traps must be an array/);
+
+    const nameless = valid();
+    weights(nameless).push({} as Weight);
+    expect(check(nameless)).toMatch(/entry needs a speciesId/);
+
+    const namelessTrap = valid();
+    traps(namelessTrap).push({} as Trap);
+    expect(check(namelessTrap)).toMatch(/every trap needs a speciesId/);
   });
 });
