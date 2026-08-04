@@ -66,7 +66,17 @@ export interface Species {
   phenology: { startMonth: number; endMonth: number };
 
   /** CI fails if this is missing. Review is structural, not aspirational. */
-  review: { reviewedBy: string | null; reviewedOn: string | null; sources: string[] };
+  review: ContentReview;
+}
+
+/**
+ * A human signature on a claim about the real world. `reviewedBy: null` means
+ * unreviewed, which is reported as UNREVIEWED and fails `--strict`.
+ */
+export interface ContentReview {
+  reviewedBy: string | null;
+  reviewedOn: string | null;
+  sources: string[];
 }
 
 /** The actual curriculum unit. */
@@ -78,6 +88,96 @@ export interface ConfusionSet {
   /** Features that look decisive but aren't — the trap. */
   redHerrings: FeatureId[];
   teachingNote: string;
+}
+
+/**
+ * One species' share of a foray, and how often it lies about its substrate.
+ *
+ * Weights are relative and need not sum to anything. They are a curriculum
+ * decision, not an abundance estimate: if the toxic member of a set is rare in
+ * the patch, the player learns "probably the edible one" as a prior, which is
+ * the exact reflex this app exists to break.
+ */
+export interface ForaySpeciesWeight {
+  speciesId: string;
+  weight: number;
+}
+
+/**
+ * An individual that presents a substrate other than its own.
+ *
+ * The only trap the generator supports, because it is the only one that is
+ * honest: the specimen really does rise from bare ground, the player really
+ * does read it correctly, and the evidence is genuinely misleading. That is a
+ * different lesson from misperception, and the value the individual presents
+ * has to be one another member of the set actually carries — otherwise it
+ * counterfeits nobody and teaches nothing.
+ *
+ * **The mechanism runs one way.** Buried wood and roots make a wood-dweller look
+ * terrestrial; nothing makes a mycorrhizal fungus look lignicolous, because it
+ * has no way to fruit from a log. A trap in that direction would teach that a
+ * mushroom on dead hardwood might be an edible chanterelle, which is the single
+ * inference the first confusion set exists to prevent. The validator refuses it.
+ *
+ * The rate lives here and not in the species file on purpose. `chance: 0.35`
+ * inside `omphalotus-illudens.json` would put a game number into a document
+ * whose reviewer is checking it against MushroomExpert. Different document,
+ * different reviewer.
+ */
+export interface ForayTrap {
+  speciesId: string;
+  /** Substrate this individual presents instead of its own. */
+  presentsSubstrate: string;
+  /** 0..1 — the share of this species' individuals that present it. */
+  chance: number;
+  /** Author-facing: why this trap is realistic, and where the number came from. */
+  designNote: string;
+}
+
+/**
+ * A patch of ground on a particular month — the unit a player actually plays.
+ *
+ * Everything tunable is here rather than in a scene component, because a spawn
+ * table hardcoded in a renderer is the content-as-data bug. The mechanism lives
+ * in `src/game/forage.ts` and is pure, so a seed reproduces a forest exactly.
+ *
+ * `month` gates which members fruit, and the curriculum is genuinely seasonal:
+ * as the shipped species files record it, the three taxa overlap in August
+ * alone — though those phenology windows are themselves flagged for review, so
+ * that is a fact about the data before it is a fact about the woods. A foray may
+ * cover fewer members than its confusion set, but only because nature left them
+ * out, never because the author did. The validator holds that line.
+ *
+ * A foray carries a `review` block because a trap rate is a claim about what an
+ * individual can present, and no structural check can tell a realistic trap from
+ * a dangerous one.
+ */
+export interface Foray {
+  id: string;
+  confusionSetId: string;
+  /** Player-facing short name. */
+  title: string;
+  /** 1..12. */
+  month: number;
+  specimenCount: number;
+  speciesWeights: ForaySpeciesWeight[];
+  traps: ForayTrap[];
+  /** Author-facing: why this month, these weights, this trap rate. */
+  designNote: string;
+  review: ContentReview;
+}
+
+/**
+ * Does a taxon with this phenology fruit in this month?
+ *
+ * A window may wrap the new year — velvet shank runs November into March — so
+ * `startMonth > endMonth` is a wrap, not a mistake.
+ */
+export function fruitsInMonth(phenology: Species['phenology'], month: number): boolean {
+  const { startMonth, endMonth } = phenology;
+  return startMonth <= endMonth
+    ? month >= startMonth && month <= endMonth
+    : month >= startMonth || month <= endMonth;
 }
 
 /** An individual in the world. You ID individuals, not species. */

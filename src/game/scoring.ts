@@ -27,7 +27,12 @@ export const XP_RIGHT_WITHOUT_GROUNDS = 25;
 /** Below this share of the set's discriminators, a correct answer is a guess. */
 export const EVIDENCE_THRESHOLD = 0.5;
 
-function lookup(index: SpeciesIndex, id: string): Species | undefined {
+/**
+ * Resolve a species id against either index shape. Exported because every
+ * module that takes a `SpeciesIndex` needs it and a second copy would be a
+ * second chance to get the `Map`/`Record` branch wrong.
+ */
+export function lookupSpecies(index: SpeciesIndex, id: string): Species | undefined {
   return index instanceof Map ? index.get(id) : index[id];
 }
 
@@ -56,29 +61,65 @@ export function reachableDiscriminators(
   return confusionSet.discriminators.filter((feature) => isAvailable(specimen, feature));
 }
 
+function scoreMembers(
+  specimen: Specimen,
+  confusionSet: ConfusionSet,
+  index: SpeciesIndex,
+): { speciesId: string; score: number }[] {
+  const reachable = reachableDiscriminators(specimen, confusionSet);
+  return confusionSet.memberSpeciesIds
+    .map((speciesId) => ({ speciesId, species: lookupSpecies(index, speciesId) }))
+    .filter((entry): entry is { speciesId: string; species: Species } => entry.species !== undefined)
+    .map(({ speciesId, species }) => ({
+      speciesId,
+      score: reachable.filter((feature) => matchesFeature(species, feature, specimen)).length,
+    }));
+}
+
+/**
+ * Members consistent with *every* reachable discriminator — strict elimination.
+ *
+ * An empty result is not "nobody knows", it is a third thing: the individual
+ * contradicts itself. A jack-o'-lantern on a buried root shows true gills and
+ * apparent soil, and no member of the set can satisfy both. Something visible is
+ * lying, and that is a different situation from two species genuinely remaining.
+ *
+ * `candidateSpecies` cannot tell those apart, which is why this exists. Its
+ * argmax returns the same list — everybody, tied — for "all three fit
+ * everything" and for "nobody fits anything".
+ */
+export function consistentSpecies(
+  specimen: Specimen,
+  confusionSet: ConfusionSet,
+  index: SpeciesIndex,
+): string[] {
+  const reachable = reachableDiscriminators(specimen, confusionSet);
+  return scoreMembers(specimen, confusionSet, index)
+    .filter((entry) => entry.score === reachable.length)
+    .map((entry) => entry.speciesId);
+}
+
 /**
  * Members of the set best supported by everything this individual will give up.
  *
  * Best match, not strict elimination. An individual can present a character
  * that contradicts its own species — a jack-o'-lantern from a buried root reads
  * as growing from soil — and the lesson there is that the weight of the other
- * evidence still resolves it, not that the specimen becomes unknowable. A tie
- * means the evidence does not single anyone out.
+ * evidence still resolves it, not that the specimen becomes unknowable. So when
+ * strict elimination leaves nobody standing this still names whoever is closest,
+ * rather than going empty.
+ *
+ * A tie therefore means one of two opposite things, and callers that care must
+ * ask `consistentSpecies` which: everyone fits the evidence, or nobody does.
+ * Reading a tie as "equally possible" is false in the second case and says so to
+ * a player looking at a mushroom with true gills.
  */
 export function candidateSpecies(
   specimen: Specimen,
   confusionSet: ConfusionSet,
   index: SpeciesIndex,
 ): string[] {
-  const reachable = reachableDiscriminators(specimen, confusionSet);
-  const scored = confusionSet.memberSpeciesIds
-    .map((speciesId) => ({ speciesId, species: lookup(index, speciesId) }))
-    .filter((entry): entry is { speciesId: string; species: Species } => entry.species !== undefined)
-    .map(({ speciesId, species }) => ({
-      speciesId,
-      score: reachable.filter((feature) => matchesFeature(species, feature, specimen)).length,
-    }));
-
+  const scored = scoreMembers(specimen, confusionSet, index);
   if (scored.length === 0) return [];
   const best = Math.max(...scored.map((entry) => entry.score));
   return scored.filter((entry) => entry.score === best).map((entry) => entry.speciesId);
@@ -156,7 +197,7 @@ export function candidatesGivenObservations(
   };
 
   const scored = confusionSet.memberSpeciesIds
-    .map((speciesId) => ({ speciesId, species: lookup(index, speciesId) }))
+    .map((speciesId) => ({ speciesId, species: lookupSpecies(index, speciesId) }))
     .filter((entry): entry is { speciesId: string; species: Species } => entry.species !== undefined)
     .map(({ speciesId, species }) => ({
       speciesId,
@@ -178,7 +219,7 @@ function misleadingFeatures(
   confusionSet: ConfusionSet,
   index: SpeciesIndex,
 ): FeatureId[] {
-  const species = lookup(index, specimen.speciesId);
+  const species = lookupSpecies(index, specimen.speciesId);
   if (!species) return [];
   return reachableDiscriminators(specimen, confusionSet).filter(
     (feature) => !matchesFeature(species, feature, specimen),
@@ -195,7 +236,7 @@ function settlingFeatures(
     .filter((feature) => isAvailable(specimen, feature))
     .filter((feature) => {
       const survivors = confusionSet.memberSpeciesIds.filter((speciesId) => {
-        const groundTruth = lookup(index, speciesId)?.features[feature];
+        const groundTruth = lookupSpecies(index, speciesId)?.features[feature];
         if (!groundTruth || groundTruth.length === 0) return true;
         return groundTruth.includes(specimen.observedFeatures[feature]!);
       });
@@ -228,9 +269,20 @@ export function grade(
     discriminators.length === 0 ? 1 : checkedDiscriminators.length / discriminators.length;
 
   const candidateSpeciesIds = candidateSpecies(specimen, confusionSet, index);
-  const underdetermined = candidateSpeciesIds.length !== 1;
+  const consistent = consistentSpecies(specimen, confusionSet, index);
+  const settling = settlingFeatures(specimen, confusionSet, index);
 
-  const specimenSpecies = lookup(index, specimen.speciesId);
+  // Three situations, not two. One member consistent with everything reachable:
+  // resolvable. Two or more: genuinely ambiguous. None: the individual
+  // contradicts itself — a jack-o'-lantern on a buried root shows true gills and
+  // apparent soil, and no chanterelle has gills. That is still resolvable when
+  // some single reachable character cuts the set down to the species in the
+  // player's hand, and reading it as "everyone is equally possible" told a
+  // player holding a gilled mushroom that it might be an edible chanterelle.
+  const contradictory = consistent.length === 0;
+  const underdetermined = contradictory ? settling.length === 0 : consistent.length !== 1;
+
+  const specimenSpecies = lookupSpecies(index, specimen.speciesId);
   const specimenName = displayName(specimenSpecies, specimen.speciesId);
 
   const correct = attempt.answer.kind === 'species' && attempt.answer.speciesId === specimen.speciesId;
@@ -240,10 +292,13 @@ export function grade(
   let xp: number;
   let hardStop: Grade['hardStop'];
 
-  const underdeterminedReason =
-    candidateSpeciesIds.length > 1
+  const underdeterminedReason = contradictory
+    ? `The characters on this individual disagree: no species in this set fits all of ${labels(
+        reachableDiscriminators(specimen, confusionSet),
+      )} at once. One of them is lying, and nothing left settles which.`
+    : candidateSpeciesIds.length > 1
       ? `Even with everything this individual will give up, ${candidateSpeciesIds
-          .map((id) => displayName(lookup(index, id), id))
+          .map((id) => displayName(lookupSpecies(index, id), id))
           .join(' and ')} remain equally possible.`
       : 'Nothing in this confusion set can be checked against this individual.';
 
@@ -259,7 +314,6 @@ export function grade(
     } else {
       xp = XP_UNNECESSARY_DECLINE;
       feedback.push('This individual was resolvable.');
-      const settling = settlingFeatures(specimen, confusionSet, index);
       if (settling.length > 0) {
         const feature = settling[0];
         feedback.push(
@@ -293,11 +347,10 @@ export function grade(
     }
   } else {
     xp = 0;
-    const answeredSpecies = lookup(index, attempt.answer.speciesId);
+    const answeredSpecies = lookupSpecies(index, attempt.answer.speciesId);
     feedback.push(
       `Not ${displayName(answeredSpecies, attempt.answer.speciesId)}. This is ${specimenName}.`,
     );
-    const settling = settlingFeatures(specimen, confusionSet, index);
     const missedSettling = settling.filter((feature) => !checked.includes(feature));
     if (missedSettling.length > 0) {
       const feature = missedSettling[0];
