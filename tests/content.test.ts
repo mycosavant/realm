@@ -2,16 +2,23 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import type { Species } from '../data/schema';
+import type { ConfusionSet, Species } from '../data/schema';
 import {
   loadContent,
   report,
   validateAll,
   validateConfusionSet,
+  validateForay,
   validateSpecies,
   type Issue,
 } from '../scripts/validate-species';
-import { CHANTERELLE, CHANTERELLE_SET, JACK_O_LANTERN, SMOOTH_CHANTERELLE } from './fixtures';
+import {
+  AUGUST_FORAY,
+  CHANTERELLE,
+  CHANTERELLE_SET,
+  JACK_O_LANTERN,
+  SMOOTH_CHANTERELLE,
+} from './fixtures';
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'data');
 const content = loadContent(dataDir);
@@ -27,6 +34,8 @@ const speciesIndex = new Map<string, Species>([
   [SMOOTH_CHANTERELLE.id, SMOOTH_CHANTERELLE],
   [JACK_O_LANTERN.id, JACK_O_LANTERN],
 ]);
+
+const confusionSetIndex = new Map<string, ConfusionSet>([[CHANTERELLE_SET.id, CHANTERELLE_SET]]);
 
 describe('shipped content', () => {
   it('is structurally valid', () => {
@@ -222,5 +231,136 @@ describe('validateConfusionSet', () => {
     expect(messages(errors(validateConfusionSet(broken, speciesIndex, file)))).toMatch(
       /at least two species/,
     );
+  });
+});
+
+describe('validateForay', () => {
+  const file = 'forays/appalachian-august.json';
+  const valid = () => structuredClone(AUGUST_FORAY) as unknown as Record<string, unknown>;
+  const check = (raw: Record<string, unknown>, name = file) =>
+    messages(errors(validateForay(raw, speciesIndex, confusionSetIndex, name)));
+
+  type Weight = { speciesId: string; weight: number };
+  type Trap = { speciesId: string; presentsSubstrate: string; chance: number; designNote: string };
+  const weights = (raw: Record<string, unknown>) => raw.speciesWeights as Weight[];
+  const traps = (raw: Record<string, unknown>) => raw.traps as Trap[];
+
+  it('accepts the shipped foray', () => {
+    expect(errors(validateForay(valid(), speciesIndex, confusionSetIndex, file))).toEqual([]);
+  });
+
+  it('requires the id to match the filename', () => {
+    expect(check(valid(), 'forays/something-else.json')).toMatch(/does not match the filename/);
+  });
+
+  it('rejects a month outside the calendar', () => {
+    const broken = valid();
+    broken.month = 13;
+    expect(check(broken)).toMatch(/month must be an integer/);
+  });
+
+  it('rejects an unknown confusion set', () => {
+    const broken = valid();
+    broken.confusionSetId = 'amanita-vs-agaricus';
+    expect(check(broken)).toMatch(/unknown confusion set/);
+  });
+
+  it('rejects a species that is not a member of the named set', () => {
+    const broken = valid();
+    weights(broken).push({ speciesId: 'morchella-americana', weight: 1 });
+    // Unknown to the index as well as to the set — the first check fires.
+    expect(check(broken)).toMatch(/unknown species/);
+  });
+
+  it('rejects a species that does not fruit in the foray month', () => {
+    const broken = valid();
+    // The Appalachian chanterelle stops at August; a September foray that still
+    // weights it is a file asserting something the engine will drop.
+    broken.month = 9;
+    expect(check(broken)).toMatch(/does not fruit in month 9/);
+  });
+
+  it('rejects dropping a member that the month puts in the woods', () => {
+    // The dangerous one. Quietly leaving the toxic species out of an August
+    // foray gives a patch where every specimen is edible, and the file reads
+    // like an ordinary curriculum.
+    const broken = valid();
+    broken.speciesWeights = weights(broken).filter((w) => w.speciesId !== JACK_O_LANTERN.id);
+    broken.traps = [];
+    expect(check(broken)).toMatch(/never because the author did/);
+  });
+
+  it('accepts covering fewer members when the month is the reason', () => {
+    // June: both chanterelles, no jack-o'-lantern, and that is honest.
+    const june = valid();
+    june.month = 6;
+    june.speciesWeights = [
+      { speciesId: CHANTERELLE.id, weight: 1 },
+      { speciesId: SMOOTH_CHANTERELLE.id, weight: 1 },
+    ];
+    june.traps = [];
+    expect(check(june)).toBe('');
+  });
+
+  it('rejects a foray that can only spawn one species', () => {
+    const broken = valid();
+    broken.month = 6;
+    broken.speciesWeights = [{ speciesId: CHANTERELLE.id, weight: 1 }];
+    broken.traps = [];
+    expect(check(broken)).toMatch(/one species is a specimen, not a confusion/);
+  });
+
+  it('rejects a zero weight, which is an omission dressed as inclusion', () => {
+    const broken = valid();
+    weights(broken)[2].weight = 0;
+    expect(check(broken)).toMatch(/must be a positive number/);
+  });
+
+  it('rejects the same species weighted twice', () => {
+    const broken = valid();
+    weights(broken).push({ speciesId: CHANTERELLE.id, weight: 5 });
+    expect(check(broken)).toMatch(/twice/);
+  });
+
+  it('rejects a trap on a species this foray does not spawn', () => {
+    const broken = valid();
+    traps(broken)[0].speciesId = SMOOTH_CHANTERELLE.id;
+    broken.speciesWeights = weights(broken).filter((w) => w.speciesId !== SMOOTH_CHANTERELLE.id);
+    expect(check(broken)).toMatch(/which this foray does not spawn/);
+  });
+
+  it('rejects a trap that presents a substrate the species really grows on', () => {
+    const broken = valid();
+    traps(broken)[0].presentsSubstrate = 'hardwood-dead';
+    expect(check(broken)).toMatch(/it is a no-op/);
+  });
+
+  it('rejects a trap that counterfeits nobody', () => {
+    const broken = valid();
+    // Nothing in this foray grows on conifer, so an individual presenting it
+    // is not impersonating a member of the set — it is just noise.
+    traps(broken)[0].presentsSubstrate = 'conifer';
+    expect(check(broken)).toMatch(/has to counterfeit somebody/);
+  });
+
+  it('rejects a substrate outside the vocabulary', () => {
+    const broken = valid();
+    traps(broken)[0].presentsSubstrate = 'astroturf';
+    expect(check(broken)).toMatch(/presentsSubstrate must be one of/);
+  });
+
+  it('rejects a trap chance outside (0, 1]', () => {
+    const broken = valid();
+    traps(broken)[0].chance = 0;
+    expect(check(broken)).toMatch(/a zero-chance trap is a comment/);
+  });
+
+  it('requires a design note on the foray and on every trap', () => {
+    const broken = valid();
+    broken.designNote = '';
+    traps(broken)[0].designNote = '   ';
+    const found = check(broken);
+    expect(found).toMatch(/designNote is required — every number/);
+    expect(found).toMatch(/asserts how often this happens in the woods/);
   });
 });

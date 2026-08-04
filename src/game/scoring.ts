@@ -27,7 +27,12 @@ export const XP_RIGHT_WITHOUT_GROUNDS = 25;
 /** Below this share of the set's discriminators, a correct answer is a guess. */
 export const EVIDENCE_THRESHOLD = 0.5;
 
-function lookup(index: SpeciesIndex, id: string): Species | undefined {
+/**
+ * Resolve a species id against either index shape. Exported because every
+ * module that takes a `SpeciesIndex` needs it and a second copy would be a
+ * second chance to get the `Map`/`Record` branch wrong.
+ */
+export function lookupSpecies(index: SpeciesIndex, id: string): Species | undefined {
   return index instanceof Map ? index.get(id) : index[id];
 }
 
@@ -72,7 +77,7 @@ export function candidateSpecies(
 ): string[] {
   const reachable = reachableDiscriminators(specimen, confusionSet);
   const scored = confusionSet.memberSpeciesIds
-    .map((speciesId) => ({ speciesId, species: lookup(index, speciesId) }))
+    .map((speciesId) => ({ speciesId, species: lookupSpecies(index,speciesId) }))
     .filter((entry): entry is { speciesId: string; species: Species } => entry.species !== undefined)
     .map(({ speciesId, species }) => ({
       speciesId,
@@ -156,7 +161,7 @@ export function candidatesGivenObservations(
   };
 
   const scored = confusionSet.memberSpeciesIds
-    .map((speciesId) => ({ speciesId, species: lookup(index, speciesId) }))
+    .map((speciesId) => ({ speciesId, species: lookupSpecies(index,speciesId) }))
     .filter((entry): entry is { speciesId: string; species: Species } => entry.species !== undefined)
     .map(({ speciesId, species }) => ({
       speciesId,
@@ -178,7 +183,7 @@ function misleadingFeatures(
   confusionSet: ConfusionSet,
   index: SpeciesIndex,
 ): FeatureId[] {
-  const species = lookup(index, specimen.speciesId);
+  const species = lookupSpecies(index,specimen.speciesId);
   if (!species) return [];
   return reachableDiscriminators(specimen, confusionSet).filter(
     (feature) => !matchesFeature(species, feature, specimen),
@@ -195,7 +200,7 @@ function settlingFeatures(
     .filter((feature) => isAvailable(specimen, feature))
     .filter((feature) => {
       const survivors = confusionSet.memberSpeciesIds.filter((speciesId) => {
-        const groundTruth = lookup(index, speciesId)?.features[feature];
+        const groundTruth = lookupSpecies(index,speciesId)?.features[feature];
         if (!groundTruth || groundTruth.length === 0) return true;
         return groundTruth.includes(specimen.observedFeatures[feature]!);
       });
@@ -230,7 +235,7 @@ export function grade(
   const candidateSpeciesIds = candidateSpecies(specimen, confusionSet, index);
   const underdetermined = candidateSpeciesIds.length !== 1;
 
-  const specimenSpecies = lookup(index, specimen.speciesId);
+  const specimenSpecies = lookupSpecies(index,specimen.speciesId);
   const specimenName = displayName(specimenSpecies, specimen.speciesId);
 
   const correct = attempt.answer.kind === 'species' && attempt.answer.speciesId === specimen.speciesId;
@@ -243,7 +248,7 @@ export function grade(
   const underdeterminedReason =
     candidateSpeciesIds.length > 1
       ? `Even with everything this individual will give up, ${candidateSpeciesIds
-          .map((id) => displayName(lookup(index, id), id))
+          .map((id) => displayName(lookupSpecies(index,id), id))
           .join(' and ')} remain equally possible.`
       : 'Nothing in this confusion set can be checked against this individual.';
 
@@ -293,7 +298,7 @@ export function grade(
     }
   } else {
     xp = 0;
-    const answeredSpecies = lookup(index, attempt.answer.speciesId);
+    const answeredSpecies = lookupSpecies(index,attempt.answer.speciesId);
     feedback.push(
       `Not ${displayName(answeredSpecies, attempt.answer.speciesId)}. This is ${specimenName}.`,
     );

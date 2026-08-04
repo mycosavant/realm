@@ -80,6 +80,83 @@ export interface ConfusionSet {
   teachingNote: string;
 }
 
+/**
+ * One species' share of a foray, and how often it lies about its substrate.
+ *
+ * Weights are relative and need not sum to anything. They are a curriculum
+ * decision, not an abundance estimate: if the toxic member of a set is rare in
+ * the patch, the player learns "probably the edible one" as a prior, which is
+ * the exact reflex this app exists to break.
+ */
+export interface ForaySpeciesWeight {
+  speciesId: string;
+  weight: number;
+}
+
+/**
+ * An individual that presents a substrate other than its own.
+ *
+ * The only trap the generator supports, because it is the only one that is
+ * honest: the specimen really does rise from bare ground, the player really
+ * does read it correctly, and the evidence is genuinely misleading. That is a
+ * different lesson from misperception, and the value the individual presents
+ * has to be one another member of the set actually carries — otherwise it
+ * counterfeits nobody and teaches nothing.
+ *
+ * The rate lives here and not in the species file on purpose. `chance: 0.35`
+ * inside `omphalotus-illudens.json` would put a game number into a document
+ * whose reviewer is checking it against MushroomExpert. Different document,
+ * different reviewer.
+ */
+export interface ForayTrap {
+  speciesId: string;
+  /** Substrate this individual presents instead of its own. */
+  presentsSubstrate: string;
+  /** 0..1 — the share of this species' individuals that present it. */
+  chance: number;
+  /** Author-facing: why this trap is realistic, and where the number came from. */
+  designNote: string;
+}
+
+/**
+ * A patch of ground on a particular month — the unit a player actually plays.
+ *
+ * Everything tunable is here rather than in a scene component, because a spawn
+ * table hardcoded in a renderer is the content-as-data bug. The mechanism lives
+ * in `src/game/forage.ts` and is pure, so a seed reproduces a forest exactly.
+ *
+ * `month` gates which members fruit, and the curriculum is genuinely seasonal:
+ * in the shipped set the three taxa overlap in August alone. A foray may cover
+ * fewer members than its confusion set — but only because nature left them out,
+ * never because the author did. The validator holds that line.
+ */
+export interface Foray {
+  id: string;
+  confusionSetId: string;
+  /** Player-facing short name. */
+  title: string;
+  /** 1..12. */
+  month: number;
+  specimenCount: number;
+  speciesWeights: ForaySpeciesWeight[];
+  traps: ForayTrap[];
+  /** Author-facing: why this month, these weights, this trap rate. */
+  designNote: string;
+}
+
+/**
+ * Does a taxon with this phenology fruit in this month?
+ *
+ * A window may wrap the new year — velvet shank runs November into March — so
+ * `startMonth > endMonth` is a wrap, not a mistake.
+ */
+export function fruitsInMonth(phenology: Species['phenology'], month: number): boolean {
+  const { startMonth, endMonth } = phenology;
+  return startMonth <= endMonth
+    ? month >= startMonth && month <= endMonth
+    : month >= startMonth || month <= endMonth;
+}
+
 /** An individual in the world. You ID individuals, not species. */
 export interface Specimen {
   id: string;

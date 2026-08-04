@@ -1,6 +1,6 @@
 # v1 interface design — the playable loop
 
-Status: **revision 2. Steps 0 and 1 are built; steps 2–5 are still proposal.**
+Status: **revision 2. Steps 0, 1 and 2 are built; steps 3–5 are still proposal.**
 Revision 1 was reviewed by an architecture pass, an adversarial pass and a
 mycology pass. All three found real defects; the central argument of revision 1
 did not survive. What follows is what is left after those corrections. The
@@ -200,9 +200,9 @@ reaction. Three collisions in fifty-two values, and a flat map silently picks
 one. `tests/vocabulary.test.ts` enumerates the shared values and fails if any
 two characters give one the same prose.
 
-## Forage generation: mechanism in `game/`, tuning in `data/`
+## Forage generation: mechanism in `game/`, tuning in `data/` — built
 
-`src/game/forage.ts`, pure: `generatePatch(rng, spec, index): Specimen[]`. The
+`src/game/forage.ts`, pure: `generatePatch(rng, foray, index): Specimen[]`. The
 rng module already promises a seed reproduces a forest exactly; that is only
 keepable if selection is pure.
 
@@ -220,6 +220,69 @@ three callers today, all in tests. Revision 1 deferred it to Phase 3 on the
 false premise that it needed a scene, which would have hidden the confusion
 set's central trap from exactly the review meant to judge it. It is staged in
 Phase 1.
+
+### The curriculum is one month wide
+
+Phenology was listed as a knob. Measured against the shipped species files it is
+a constraint: the Appalachian chanterelle runs June to August, the smooth
+chanterelle June to November, the jack-o'-lantern August to November. **August is
+the only month all three fruit at once.** A September foray on this set is a
+genuinely different and smaller curriculum — the smooth chanterelle against the
+jack-o'-lantern, which the spore print *does* resolve, so the pairing the
+teaching note calls dangerous is not even present. A test pins the one-month
+window, because a phenology edit that widened it would quietly change what the
+flagship foray teaches.
+
+Gating is enforced twice, and that is deliberate rather than redundant. The
+validator refuses to let a file weight a species that does not fruit in its
+month — otherwise the file asserts a species the engine will silently drop.
+`generatePatch` drops it anyway, because seasonality is a rule about the world
+and not a lint about the file, and a caller synthesising a foray at runtime is
+entitled to the rule.
+
+### Two validator rules that are about honesty, not structure
+
+- **A foray may cover fewer members than its confusion set only because nature
+  left them out, never because the author did.** Every in-season member must be
+  weighted. Without this, dropping the jack-o'-lantern from an August foray
+  yields a patch where every specimen is edible and a player who learns "orange
+  means chanterelle" — and the file reads like an ordinary curriculum. A June
+  foray covering only the two chanterelles passes, because in June that is true.
+- **A trap has to counterfeit somebody.** `presentsSubstrate` must be a value the
+  species does not grow on (or the trap is a no-op that reads as a trap) *and*
+  one another species in the same patch does grow on (or the individual presents
+  a character nobody in the set has, which is noise rather than a lesson).
+
+### What the trap actually does to the player, measured
+
+The teaching note's claims are now tested rather than asserted. On a trapped
+jack-o'-lantern: one look at the substrate, read correctly, deletes the toxic
+species from the shortlist. The underside and the odor get it back. `grade()`,
+which applies every reachable discriminator at once instead of one at a time,
+resolves the individual and names the character that lied.
+
+On a **button** it does not recover, and this is the case worth knowing about.
+The underside has not opened, the spore print is blank, and what is left is a
+lying substrate against a truthful odor — one character each way. The individual
+is genuinely unresolvable, `grade()` says so, and declining scores 100. That is
+rule 5 working, and it is the one place in the shipped content where the
+full-credit decline is reachable without contrivance.
+
+### Forays are not review-gated, and neither are confusion sets
+
+A foray file asserts things about the woods: that a third of jack-o'-lanterns
+present as rising from bare ground, that August is the right month. It carries no
+`review` block — matching `data/confusion-sets/`, which carries none either.
+
+That is consistent, and it is also a gap. CLAUDE.md rule 4 names `data/species/`,
+and the two-tier gate follows it exactly, so the single most load-bearing piece
+of prose in the repo — the confusion set's `teachingNote`, which is where the
+safety argument actually lives — ships with no reviewer attached. Extending the
+gate is a policy decision, not a refactor; it is recorded here rather than taken.
+
+In the meantime the foray requires a `designNote` on the file and on every trap,
+and the shipped one says in as many words that its numbers are invented and that
+nobody has measured how often the buried-root trap actually happens.
 
 ## Depiction: what revision 1 got wrong
 
@@ -344,8 +407,9 @@ runtime loader. 103 tests, and the production bundle now carries `data/`.
 `src/game/session.ts` with `sessionView`, derived actions, and the two-value
 observation. All pure, all tested.
 
-**2.** `src/game/forage.ts` + `data/forays/` + validator extension — traps are
-data from day one, including the buried-root trap.
+**2. Done.** `src/game/forage.ts`, `data/forays/appalachian-august.json`, and
+`validateForay`. Traps are data from day one, including the buried-root trap.
+193 tests.
 
 **3.** `src/state/` (one file, transport only), `src/persist/`, and the plain
 text UI. **Milestone: the content and the scoring are playable and judgeable.**

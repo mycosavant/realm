@@ -12,7 +12,7 @@
  * a glob, so the two loaders are only equivalent by assertion.
  * `tests/content-loader.test.ts` is that assertion.
  */
-import type { ConfusionSet, Species } from '../../data/schema';
+import type { ConfusionSet, Foray, Species } from '../../data/schema';
 import type { SpeciesIndex } from '../game';
 
 const speciesModules = import.meta.glob('../../data/species/*.json', {
@@ -25,6 +25,11 @@ const confusionSetModules = import.meta.glob('../../data/confusion-sets/*.json',
   import: 'default',
 }) as Record<string, ConfusionSet>;
 
+const forayModules = import.meta.glob('../../data/forays/*.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, Foray>;
+
 function byId<T extends { id: string }>(modules: Record<string, T>): readonly T[] {
   // Sorted rather than left in glob order: content order must not depend on the
   // bundler, or a seeded forage stops reproducing across builds.
@@ -33,8 +38,9 @@ function byId<T extends { id: string }>(modules: Record<string, T>): readonly T[
 
 export const SPECIES: readonly Species[] = byId(speciesModules);
 export const CONFUSION_SETS: readonly ConfusionSet[] = byId(confusionSetModules);
+export const FORAYS: readonly Foray[] = byId(forayModules);
 
-if (SPECIES.length === 0 || CONFUSION_SETS.length === 0) {
+if (SPECIES.length === 0 || CONFUSION_SETS.length === 0 || FORAYS.length === 0) {
   // Only reachable if the glob stops matching — a moved directory or a typo.
   // The alternative failure is an empty forest that looks like a working app.
   throw new Error('content loader matched no files; data/ did not reach the bundle');
@@ -42,6 +48,7 @@ if (SPECIES.length === 0 || CONFUSION_SETS.length === 0) {
 
 const speciesById = new Map(SPECIES.map((species) => [species.id, species]));
 const confusionSetsById = new Map(CONFUSION_SETS.map((set) => [set.id, set]));
+const foraysById = new Map(FORAYS.map((foray) => [foray.id, foray]));
 
 /**
  * Typed as the union `src/game/` accepts, so callers pass it straight to
@@ -55,4 +62,8 @@ export function findSpecies(id: string): Species | undefined {
 
 export function findConfusionSet(id: string): ConfusionSet | undefined {
   return confusionSetsById.get(id);
+}
+
+export function findForay(id: string): Foray | undefined {
+  return foraysById.get(id);
 }

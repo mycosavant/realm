@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { ConfusionSet, Species } from '../data/schema';
+import type { ConfusionSet, Foray, Species } from '../data/schema';
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'data');
 
@@ -17,6 +17,7 @@ export const JACK_O_LANTERN = readJson<Species>('species/omphalotus-illudens.jso
 export const CHANTERELLE_SET = readJson<ConfusionSet>(
   'confusion-sets/chanterelle-vs-jack-o-lantern.json',
 );
+export const AUGUST_FORAY = readJson<Foray>('forays/appalachian-august.json');
 
 export const SPECIES_INDEX: Record<string, Species> = {
   [CHANTERELLE.id]: CHANTERELLE,

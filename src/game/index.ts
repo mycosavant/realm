@@ -7,6 +7,7 @@ export * from './rng';
 export * from './availability';
 export * from './specimen';
 export * from './examination';
+export * from './forage';
 export * from './scoring';
 export * from './session';
 export * from './progression';
